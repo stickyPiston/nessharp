@@ -93,7 +93,7 @@ namespace NesSharpTests
 
             // Run
             Console.WriteLine();
-            while (cpu.PC != 0)
+            while (cpu.PC >= 0xC000)
             {
                 cpu.Cycle();
                 Console.WriteLine(cycle.ToString().PadLeft(5, '0') + " | " + cpu.DumpCycle());

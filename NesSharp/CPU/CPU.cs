@@ -201,7 +201,7 @@ namespace NesSharp
                 A, X, Y, P.Dump(), S, PC, _instr.PadRight(9, ' '), cycle - 1, ptr, addr, val, _read ? "READ " : "WRITE", _addr, _data);
         #else
             return string.Format("#{6} | ptr:{7:X4} addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
-                A, X, Y, Convert.ToString(P, 2).PadLeft(8, '0'), S, PC, cycle - 1, ptr, addr, val);
+                A, X, Y, P.Dump(), S, PC, cycle - 1, ptr, addr, val);
         #endif
         }
     }
