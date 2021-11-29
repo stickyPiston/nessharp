@@ -33,11 +33,19 @@ variables:
   MSBUILD_PATH: 'C:\Program Files (x86)\MSBuild\14.0\Bin\msbuild.exe'
   NUNIT_PATH: 'C:\Program Files (x86)\NUnit.org\nunit-console\nunit3-console.exe'
 
+.shared_windows_runners:
+  tags:
+    - shared-windows
+    - windows
+    - windows-1809
+
 stages:
   - build
   - test
 
 build_job:
+  extends:
+    - .shared_windows_runners
   stage: build
   # only:
   #   - commit  # the build process will only be started by git tag commits
@@ -51,6 +59,8 @@ build_job:
       - '$env:TEST_FOLDER\'  # saving entire Test project so NUnit can run tests
 
 test_job:
+  extends:
+    - .shared_windows_runners
   stage: test
   # only:
   #   - commit
