@@ -50,7 +50,7 @@ debug:
       - Reports_Coverage/
     reports:
       junit:
-        - '*.Test/TestResults/TestResults.xml'
+        - 'NesSharpTests/TestResults/TestResults.xml'
 
 # takes upwards of 10 minutes, make manual
 # code_quality:
