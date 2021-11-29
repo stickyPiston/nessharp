@@ -33,34 +33,20 @@ namespace NesSharpTests
 
             bus.Write(0xFFFC, 0x69);
             bus.Write(0xFFFD, 0x42);
-            bus.Write(0x4269, 0x02); // should jam
+            bus.Write(0x4269, 0x02);
 
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
-            cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
+            // RESET instruction
+            cpu.Cycle(8);
             
+            // JAM instruction
             cpu.Cycle();
-            Console.WriteLine(cpu.DumpCycle());
 
             try {
                 // Should crash due to a jam
                 cpu.Cycle();
                 Console.WriteLine(cpu.DumpCycle());
                 Assert.Fail();
-            } catch {
+            } catch (CPU.OpcodeException) {
                 Assert.Pass();
             }
         }

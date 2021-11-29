@@ -5,7 +5,7 @@ namespace NesSharp
 
     using Cycle = Func<CPU, bool>;
 
-    partial class CPU
+    public partial class CPU
     {
         // Bus
         private IAddressable bus;
@@ -82,6 +82,10 @@ namespace NesSharp
             {
                 pending = HardwareInterrupt.IRQ;
             }
+        }
+
+        public void Cycle(int amount) {
+            for (int i = 0; i < amount; i++) Cycle();
         }
 
         public void Cycle()

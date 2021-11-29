@@ -2,10 +2,10 @@ using System;
 
 namespace NesSharp
 {
-    
+
     using Cycle = Func<CPU, bool>;
 
-    partial class CPU
+    public partial class CPU
     {
         // Micro-instructions
         private static Cycle ReadPC = cpu => {
@@ -135,9 +135,13 @@ namespace NesSharp
             };
         }
 
+        public class OpcodeException : Exception {
+            public OpcodeException(string msg) : base(msg) {}
+        }
+
         private static Cycle Jam = cpu => {
             byte opcode = cpu.val;
-            throw new Exception(string.Format("Unknown opcode {0:X2}", opcode));
+            throw new OpcodeException(string.Format("Unknown opcode {0:X2}", opcode));
         };
 
         private static Instruction IRQInstruction = new Instruction("IRQ", new Cycle[] {
