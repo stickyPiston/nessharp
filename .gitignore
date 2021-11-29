@@ -1,0 +1,5 @@
+.vs/
+.vscode/
+vimrc/
+*/bin
+*/obj
