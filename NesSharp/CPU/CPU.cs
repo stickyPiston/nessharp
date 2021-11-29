@@ -11,7 +11,7 @@ namespace NesSharp
         private IAddressable bus;
         
         // Registers
-        private ushort PC;
+        public ushort PC { get; private set; }
         private byte S, P, A, X, Y;
 
         // Micro-instruction data
@@ -86,6 +86,11 @@ namespace NesSharp
 
         public void Cycle(int amount) {
             for (int i = 0; i < amount; i++) Cycle();
+        }
+
+        public void CycleInstruction() {
+            Cycle();
+            while (instr != null) Cycle();
         }
 
         public void Cycle()

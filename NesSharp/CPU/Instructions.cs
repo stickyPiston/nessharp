@@ -7,62 +7,83 @@ namespace NesSharp
 
     public partial class CPU
     {
-        // Micro-instructions
-        private static Cycle ReadPC = cpu => {
+        // Micro-micro-instructions
+        private static byte ReadAddr(CPU cpu, ushort addr) {
         #if DEBUG
             cpu._read = true;
-            cpu._addr = cpu.PC;
-            cpu._data = cpu.bus.Read(cpu.PC);
+            cpu._addr = addr;
+            cpu._data = cpu.bus.Read(addr);
+            return cpu._data;
         #else
-            cpu.bus.Read(cpu.PC);
+            return cpu.bus.Read(addr);
         #endif
+        }
+
+        private static void WriteAddr(CPU cpu, ushort addr, byte b) {
+        #if DEBUG
+            cpu._read = false;
+            cpu._addr = addr;
+            cpu._data = b;
+        #endif
+            cpu.bus.Write(addr, b);
+        }
+
+        // Micro-instructions
+        private static Cycle DummyFetchPC = cpu => {
+            ReadAddr(cpu, cpu.PC);
             return true;
         };
 
         private static Cycle FetchPC = cpu => {
-        #if DEBUG
-            cpu._read = true;
-            cpu._addr = cpu.PC;
-            cpu._data = cpu.bus.Read(cpu.PC);
-            cpu.val = cpu._data;
-        #else
-            cpu.val = cpu.bus.Read(cpu.PC);
-        #endif
+            cpu.val = ReadAddr(cpu, cpu.PC);
             unchecked { cpu.PC += 1; }
             return true;
         };
 
-        private static Cycle ReadStackDec = cpu => {
-        #if DEBUG
-            cpu._read = true;
-            cpu._addr = (ushort) (0x100 | cpu.S);
-            cpu._data = cpu.bus.Read(cpu.addr);
-        #else
-            cpu.bus.Read((ushort) (0x100 | cpu.S));
-        #endif
+        private static Cycle DummyPeekStack = cpu => {
+            ReadAddr(cpu, (ushort) (0x100 | cpu.S));
+            return true;
+        };
+
+        private static Cycle DummyPushStack = cpu => {
+            ReadAddr(cpu, (ushort) (0x100 | cpu.S));
             unchecked { cpu.S -= 1; }
             return true;
         };
 
         private static Cycle PushPCH = cpu => {
-        #if DEBUG
-            cpu._read = false;
-            cpu._addr = (ushort) (0x100 | cpu.S);
-            cpu._data = (byte) (cpu.PC >> 8);
-        #endif
-            cpu.bus.Write((ushort) (0x100 | cpu.S), (byte) (cpu.PC >> 8));
+            WriteAddr(cpu, (ushort) (0x100 | cpu.S), (byte) (cpu.PC >> 8));
             unchecked { cpu.S -= 1; }
             return true;
         };
 
         private static Cycle PushPCL = cpu => {
-        #if DEBUG
-            cpu._read = false;
-            cpu._addr = (ushort) (0x100 | cpu.S);
-            cpu._data = (byte) (cpu.PC & 0xFF);
-        #endif
-            cpu.bus.Write((ushort) (0x100 | cpu.S), (byte) (cpu.PC & 0xFF));
+            WriteAddr(cpu, (ushort) (0x100 | cpu.S), (byte) (cpu.PC & 0xFF));
             unchecked { cpu.S -= 1; }
+            return true;
+        };
+
+        private static Cycle JumpPC = cpu => {
+            // fetch high address
+            cpu.PC = (ushort) (ReadAddr(cpu, cpu.PC) << 8);
+
+            // copy low address byte
+            cpu.PC |= cpu.val;
+            return true;
+        };
+
+        private static Cycle LoadXPC = cpu => {
+            cpu.X = ReadAddr(cpu, cpu.PC);
+            unchecked { cpu.PC += 1; }
+            return true;
+        };
+
+        private static Cycle StoreXzpg = cpu => {
+            WriteAddr(cpu, cpu.val, cpu.X);
+            return true;
+        };
+
+        private static Cycle NOP = cpu => {
             return true;
         };
 
@@ -77,12 +98,9 @@ namespace NesSharp
 
             #if DEBUG
                 cpu._instr = cpu.instr.Value.Name;
-                cpu._read = false;
-                cpu._addr = (ushort) (0x100 | cpu.S);
-                cpu._data = cpu.P;
             #endif
 
-                cpu.bus.Write((ushort) (0x100 | cpu.S), cpu.P);
+                WriteAddr(cpu, (ushort) (0x100 | cpu.S), cpu.P);
                 unchecked { cpu.S -= 1; }
                 return true;
             };
@@ -94,12 +112,9 @@ namespace NesSharp
 
             #if DEBUG
                 cpu._instr = cpu.instr.Value.Name;
-                cpu._read = false;
-                cpu._addr = (ushort) (0x100 | cpu.S);
-                cpu._data = cpu.P;
             #endif
 
-                cpu.bus.Write((ushort) (0x100 | cpu.S), cpu.P);
+                WriteAddr(cpu, (ushort) (0x100 | cpu.S), cpu.P);
                 unchecked { cpu.S -= 1; }
                 return true;
             };
@@ -108,14 +123,7 @@ namespace NesSharp
         private static Cycle FetchPCLow(ushort addr)
         {
             return cpu => {
-            #if DEBUG
-                cpu._addr = addr;
-                cpu._data = cpu.bus.Read(addr);
-                cpu.PC |= cpu._data;
-            #else
-                cpu.PC |= cpu.bus.Read(addr);
-            #endif
-
+                cpu.PC = ReadAddr(cpu, addr);
                 cpu.P  |= 4; // Set I flag
                 return true;
             };
@@ -124,13 +132,7 @@ namespace NesSharp
         private static Cycle FetchPCHigh(ushort addr)
         {
             return cpu => {
-            #if DEBUG
-                cpu._addr = addr;
-                cpu._data = cpu.bus.Read(addr);
-                cpu.PC |= (ushort) (cpu._data << 8);
-            #else
-                cpu.PC |= (ushort) (cpu.bus.Read(addr) << 8);
-            #endif
+                cpu.PC |= (ushort) (ReadAddr(cpu, addr) << 8);
                 return true;
             };
         }
@@ -145,8 +147,8 @@ namespace NesSharp
         };
 
         private static Instruction IRQInstruction = new Instruction("IRQ", new Cycle[] {
-            ReadPC,             // dummy read
-            ReadPC,             // dummy read
+            DummyFetchPC,       // dummy read
+            DummyFetchPC,       // dummy read
             PushPCH,            // push PC to stack 
             PushPCL,
             PushP(false),       // push P to stack with B = false
@@ -154,8 +156,8 @@ namespace NesSharp
             FetchPCHigh(0xFFFF),
         });
         private static Instruction NMIInstruction = new Instruction("NMI", new Cycle[] {
-            ReadPC,             // dummy read
-            ReadPC,             // dummy read
+            DummyFetchPC,       // dummy read
+            DummyFetchPC,       // dummy read
             PushPCH,            // push PC to stack 
             PushPCL,
             PushP(false),       // push P to stack with B = false
@@ -163,9 +165,9 @@ namespace NesSharp
             FetchPCHigh(0xFFFB),
         });
         private static Instruction ResetInstruction = new Instruction("RESET", new Cycle[] {
-            ReadPC,       ReadPC,       ReadPC,       // dummy reads (I'm not sure why there are 3)
-            ReadStackDec, ReadStackDec, ReadStackDec, // decrement stack 3 times
-            FetchPCLow(0xFFFC),                       // fetch PC, set I flag
+            DummyFetchPC,   DummyFetchPC,   DummyFetchPC,   // dummy reads (I'm not sure why there are 3)
+            DummyPushStack, DummyPushStack, DummyPushStack, // decrement stack 3 times
+            FetchPCLow(0xFFFC),                             // fetch PC, set I flag
             FetchPCHigh(0xFFFD),
         });
         private static Instruction[] instructions = {
@@ -201,6 +203,7 @@ namespace NesSharp
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
+            new Instruction("JSR abs", new Cycle[] { FetchPC, FetchPC, DummyPeekStack, PushPCH, PushPCL, JumpPC }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -244,6 +247,7 @@ namespace NesSharp
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
+            new Instruction("JMP abs", new Cycle[] { FetchPC, FetchPC, JumpPC }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -301,6 +305,7 @@ namespace NesSharp
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
+            new Instruction("STX zpg", new Cycle[] { FetchPC, FetchPC, StoreXzpg }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -328,6 +333,7 @@ namespace NesSharp
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
+            new Instruction("LDX #", new Cycle[] { FetchPC, LoadXPC }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -399,11 +405,7 @@ namespace NesSharp
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-            new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-            new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-            new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-            new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-            new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
+            new Instruction("NOP impl", new Cycle[] { FetchPC, DummyFetchPC }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
             new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
