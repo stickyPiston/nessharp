@@ -1,5 +1,6 @@
 .vs/
 .vscode/
-vimrc/
+.vimrc
+Makefile
 */bin
 */obj
