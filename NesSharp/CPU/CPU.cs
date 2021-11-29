@@ -12,7 +12,55 @@ namespace NesSharp
         
         // Registers
         public ushort PC { get; private set; }
-        private byte S, P, A, X, Y;
+        public byte S { get; private set; }
+        public byte A { get; private set; }
+        public byte X { get; private set; }
+        public byte Y { get; private set; }
+
+        public struct Flags
+        {
+            public byte N, V, B, D, I, Z, C;
+
+            public string Dump() {
+                return string.Format("{0}{1}{2}{3}{4}{5}{6}{7}", N, V, 1, B, D, I, Z, C);
+            }
+
+            /// <returns>0x01 if the byte is nonzero and 0x00 if the byte is zero</returns>
+            public static byte NonZero(byte b) {
+                return (byte) (((b | (~b + 1)) >> 7) & 1);
+            }
+
+            /// <returns>0x00 if the byte is nonzero and 0x01 if the byte is zero</returns>
+            public static byte Zero(byte b) {
+                return (byte) (((b | (~b + 1)) >> 7) & 1 ^ 1);
+            }
+
+            public byte Write() {
+                return (byte) (
+                    N << 7 |
+                    V << 6 |
+                    1 << 5 |
+                    B << 4 |
+                    D << 3 |
+                    I << 2 |
+                    Z << 1 |
+                    C
+                );
+            }
+
+            public void Read(byte P) {
+                N = NonZero((byte) (P & 0b10000000));
+                V = NonZero((byte) (P & 0b01000000));
+                //  NonZero((byte) (P & 0b00100000));
+                B = NonZero((byte) (P & 0b00010000));
+                D = NonZero((byte) (P & 0b00001000));
+                I = NonZero((byte) (P & 0b00000100));
+                Z = NonZero((byte) (P & 0b00000010));
+                C = NonZero((byte) (P & 0b00000001));
+            }
+        }
+
+        public Flags P;
 
         // Micro-instruction data
         struct Instruction
@@ -57,8 +105,6 @@ namespace NesSharp
             // This goes against the wiki, but in 2010 this has been attested using a transistor-level emulator
             // Source: https://www.pagetable.com/?p=410
 
-            P = 32; // Unused bit that is always 1
-
             Reset();
         }
         
@@ -88,9 +134,14 @@ namespace NesSharp
             for (int i = 0; i < amount; i++) Cycle();
         }
 
-        public void CycleInstruction() {
+        public int CycleInstruction() {
             Cycle();
-            while (instr != null) Cycle();
+            int cycles = 1;
+            while (instr != null) {
+                Cycle();
+                cycles += 1;
+            }
+            return cycles;
         }
 
         public void Cycle()
@@ -147,7 +198,7 @@ namespace NesSharp
         public string DumpCycle() {
         #if DEBUG
             return string.Format("{6} #{7} | {11} ${12:X4} = {13:X2} | ptr:{8:X4} addr:{9:X4} val:{10:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} SP:01{4:X2} PC:{5:X4}",
-                A, X, Y, Convert.ToString(P, 2).PadLeft(8, '0'), S, PC, _instr.PadRight(9, ' '), cycle - 1, ptr, addr, val, _read ? "READ " : "WRITE", _addr, _data);
+                A, X, Y, P.Dump(), S, PC, _instr.PadRight(9, ' '), cycle - 1, ptr, addr, val, _read ? "READ " : "WRITE", _addr, _data);
         #else
             return string.Format("#{6} | ptr:{7:X4} addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
                 A, X, Y, Convert.ToString(P, 2).PadLeft(8, '0'), S, PC, cycle - 1, ptr, addr, val);

@@ -16,6 +16,7 @@ namespace NesSharpTests
 
         public void Write(ushort addr, byte data)
         {
+            if (addr == 0 && data != 0) throw new Exception(string.Format("Wrong CPU implementation! Error code {0:X2}", data));
             this.data[addr] = data;
         }
     }
@@ -32,7 +33,49 @@ namespace NesSharpTests
         }
 
         [Test]
-        public void CPU()
+        public void BitLogic()
+        {
+            Assert.AreEqual(CPU.Flags.NonZero(42), 1);
+            Assert.AreEqual(CPU.Flags.NonZero(0), 0);
+            Assert.AreEqual(CPU.Flags.Zero(42), 0);
+            Assert.AreEqual(CPU.Flags.Zero(0), 1);
+        }
+
+        [Test]
+        public void OverflowFlag()
+        {
+            bus.Write(0xFFFC, 0x00);
+            bus.Write(0xFFFD, 0xC0);
+
+            cpu.CycleInstruction(); // RESET
+
+            bus.Write(0xC000, 0x38); // SEC
+            bus.Write(0xC001, 0xA9); // LDA
+            bus.Write(0xC002, 0b10000000); // -128
+            bus.Write(0xC003, 0x69); // ADC
+            bus.Write(0xC004, 0b11111111); // -1
+
+            cpu.CycleInstruction(); // SEC
+            cpu.CycleInstruction(); // LDA
+            cpu.CycleInstruction(); // ADC
+
+            Assert.AreEqual(cpu.P.V, 0);
+
+            bus.Write(0xC005, 0x18); // CLC
+            bus.Write(0xC006, 0xA9); // LDA
+            bus.Write(0xC007, 0b10000000); // -128
+            bus.Write(0xC008, 0x69); // ADC
+            bus.Write(0xC009, 0b11111111); // -1
+
+            cpu.CycleInstruction(); // CLC
+            cpu.CycleInstruction(); // LDA
+            cpu.CycleInstruction(); // ADC
+
+            Assert.AreEqual(cpu.P.V, 1);
+        }
+
+        [Test]
+        public void Instructions()
         {
             // Write rom
             byte[] bytes = File.ReadAllBytes("../../../roms/nestest.nes");
@@ -46,14 +89,15 @@ namespace NesSharpTests
             bus.Write(0xFFFD, 0xC0);
 
             // RESET
-            cpu.CycleInstruction();
+            int cycle = cpu.CycleInstruction();
 
             // Run
             Console.WriteLine();
-            while (cpu.PC != 0xC66E)
+            while (cpu.PC != 0)
             {
                 cpu.Cycle();
-                Console.WriteLine(cpu.DumpCycle());
+                Console.WriteLine(cycle.ToString().PadLeft(5, '0') + " | " + cpu.DumpCycle());
+                cycle += 1;
             }
         }
 
