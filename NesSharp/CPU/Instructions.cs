@@ -3,353 +3,270 @@ using System;
 namespace NesSharp
 {
 
-    using Cycle = Func<CPU, bool>;
+    using Cycle = Action<CPU>;
 
     public partial class CPU
     {
         // Micro-micro-instructions
-        private static byte ReadAddr(CPU cpu, ushort addr) {
+        private byte Read(ushort addr) {
         #if DEBUG
-            cpu._read = true;
-            cpu._addr = addr;
-            cpu._data = cpu.bus.Read(addr);
-            return cpu._data;
+            this._read = true;
+            this._addr = addr;
+            this._data = this.bus.Read(addr);
+            return this._data;
         #else
-            return cpu.bus.Read(addr);
+            return this.bus.Read(addr);
         #endif
         }
 
-        private static void WriteAddr(CPU cpu, ushort addr, byte b) {
+        private void Write(ushort addr, byte b) {
         #if DEBUG
-            cpu._read = false;
-            cpu._addr = addr;
-            cpu._data = b;
+            this._read = false;
+            this._addr = addr;
+            this._data = b;
         #endif
-            cpu.bus.Write(addr, b);
+            this.bus.Write(addr, b);
         }
 
-        private static void Branch(CPU cpu, bool b) {
-            byte operand = cpu.val;
-            byte next = ReadAddr(cpu, cpu.PC);
+        private void SetFlags(byte b) {
+            this.P.N = (byte) (b >> 7);
+            this.P.Z = Flags.Zero(b);
+        }
+
+        private byte Add(byte a, byte b, byte c) {
+            ushort res = (ushort) ((ushort) a + b + c);
+            this.P.V = (byte) (((~(a ^ b)) & (a ^ (byte) res)) >> 7);
+            this.P.C = (byte) (res >> 8);
+            return (byte) res;
+        }
+
+        private void Branch(bool b) {
+            byte operand = this.val;
+            byte next = Read(this.PC);
 
             if (b) {
                 // Branch
                 // Save PCH for later
                 unchecked {
                     sbyte a = (sbyte) operand;
-                    ushort branch = (ushort) (cpu.PC + a);
-                    cpu.val = (byte) (branch >> 8);
+                    ushort branch = (ushort) (this.PC + a);
+                    this.val = (byte) (branch >> 8);
                 }
 
                 // Set PCL
-                byte PCL = (byte) cpu.PC;
+                byte PCL = (byte) this.PC;
                 unchecked { PCL += operand; }
-                cpu.PC &= 0xFF00;
-                cpu.PC |= PCL;
+                this.PC &= 0xFF00;
+                this.PC |= PCL;
             } else {
                 // Next instruction
-                unchecked { cpu.PC += 1; }
-                cpu.instr = instructions[next];
-                cpu.cycle = 0;
+                unchecked { this.PC += 1; }
+                this.instr = instructions[next];
+                this.cycle = 0;
             #if DEBUG
-                cpu._instr = cpu.instr.Value.Name;
+                this._instr = this.instr.Value.Name;
             #endif
             }
         }
 
         // Micro-instructions
-        private static Cycle DummyFetchPC = cpu => {
-            ReadAddr(cpu, cpu.PC);
-            return true;
-        };
+        private static Cycle DummyFetchPC = cpu => cpu.Read(cpu.PC);
+        private static Cycle DummyPeekStack = cpu => cpu.Read((ushort) (0x100 | cpu.S));
 
         private static Cycle FetchPC = cpu => {
-            cpu.val = ReadAddr(cpu, cpu.PC);
+            cpu.val = cpu.Read(cpu.PC);
             unchecked { cpu.PC += 1; }
-            return true;
-        };
-
-        private static Cycle DummyPeekStack = cpu => {
-            ReadAddr(cpu, (ushort) (0x100 | cpu.S));
-            return true;
         };
 
         private static Cycle DummyPushStack = cpu => {
-            ReadAddr(cpu, (ushort) (0x100 | cpu.S));
+            cpu.Read((ushort) (0x100 | cpu.S));
             unchecked { cpu.S -= 1; }
-            return true;
         };
 
         private static Cycle PushPCH = cpu => {
-            WriteAddr(cpu, (ushort) (0x100 | cpu.S), (byte) (cpu.PC >> 8));
+            cpu.Write((ushort) (0x100 | cpu.S), (byte) (cpu.PC >> 8));
             unchecked { cpu.S -= 1; }
-            return true;
         };
 
         private static Cycle PushPCL = cpu => {
-            WriteAddr(cpu, (ushort) (0x100 | cpu.S), (byte) cpu.PC);
+            cpu.Write((ushort) (0x100 | cpu.S), (byte) cpu.PC);
             unchecked { cpu.S -= 1; }
-            return true;
         };
 
         private static Cycle PushA = cpu => {
-            WriteAddr(cpu, (ushort) (0x100 | cpu.S), cpu.A);
+            cpu.Write((ushort) (0x100 | cpu.S), cpu.A);
             unchecked { cpu.S -= 1; }
-            return true;
         };
 
         private static Cycle IncSP = cpu => {
-            ReadAddr(cpu, (ushort) (0x100 | cpu.S));
+            cpu.Read((ushort) (0x100 | cpu.S));
             unchecked { cpu.S += 1; }
-            return true;
         };
 
         private static Cycle PullPCL = cpu => {
             cpu.PC &= 0xFF00;
-            cpu.PC |= ReadAddr(cpu, (ushort) (0x100 | cpu.S));
+            cpu.PC |= cpu.Read((ushort) (0x100 | cpu.S));
             unchecked { cpu.S += 1; }
-            return true;
         };
 
         private static Cycle PullPCH = cpu => {
             cpu.PC &= 0x00FF;
-            cpu.PC |= (ushort) (ReadAddr(cpu, (ushort) (0x100 | cpu.S)) << 8);
-            return true;
+            cpu.PC |= (ushort) (cpu.Read((ushort) (0x100 | cpu.S)) << 8);
         };
 
         private static Cycle PullA = cpu => {
-            cpu.A = ReadAddr(cpu, (ushort) (0x100 | cpu.S));
-            cpu.P.N = (byte) (cpu.A >> 7);
-            cpu.P.Z = Flags.Zero(cpu.A);
-            return true;
+            cpu.A = cpu.Read((ushort) (0x100 | cpu.S));
+            cpu.SetFlags(cpu.A);
         };
 
         private static Cycle PullP = cpu => {
-            cpu.P.Read(ReadAddr(cpu, (ushort) (0x100 | cpu.S)));
-            return true;
+            cpu.P.Read(cpu.Read((ushort) (0x100 | cpu.S)));
         };
 
         private static Cycle ANDimm = cpu => {
-            cpu.A &= ReadAddr(cpu, cpu.PC);
-            cpu.P.N = (byte) (cpu.A >> 7);
-            cpu.P.Z = Flags.Zero(cpu.A);
+            cpu.A &= cpu.Read(cpu.PC);
+            cpu.SetFlags(cpu.A);
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
         private static Cycle ORAimm = cpu => {
-            cpu.A |= ReadAddr(cpu, cpu.PC);
-            cpu.P.N = (byte) (cpu.A >> 7);
-            cpu.P.Z = Flags.Zero(cpu.A);
+            cpu.A |= cpu.Read(cpu.PC);
+            cpu.SetFlags(cpu.A);
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
         private static Cycle EORimm = cpu => {
-            cpu.A ^= ReadAddr(cpu, cpu.PC);
-            cpu.P.N = (byte) (cpu.A >> 7);
-            cpu.P.Z = Flags.Zero(cpu.A);
+            cpu.A ^= cpu.Read(cpu.PC);
+            cpu.SetFlags(cpu.A);
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
-        private static Cycle ADCimm = cpu => {
-            byte add = ReadAddr(cpu, cpu.PC);
+        private static Cycle ADCPC = cpu => {
+            byte add = cpu.Read(cpu.PC);
 
-            // Get 9-bit result
-            ushort res = (ushort) ((ushort) cpu.A + add + cpu.P.C);
-            cpu.P.V = (byte) (((~(cpu.A ^ add)) & (cpu.A ^ (byte) res)) >> 7);
-            cpu.P.C = (byte) (res >> 8);
-
-            // Store in accumulator
-            cpu.A = (byte) res;
-            cpu.P.N = (byte) (cpu.A >> 7);
-            cpu.P.Z = Flags.Zero(cpu.A);
+            cpu.A = cpu.Add(cpu.A, add, cpu.P.C);
+            cpu.SetFlags(cpu.A);
 
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
-        private static Cycle SBCimm = cpu => {
-            byte add = (byte) (ReadAddr(cpu, cpu.PC) ^ 0xFF);
+        private static Cycle SBCPC = cpu => {
+            byte add = (byte) ~cpu.Read(cpu.PC);
 
-            // Get 9-bit result
-            ushort res = (ushort) ((ushort) cpu.A + add + cpu.P.C);
-            cpu.P.V = (byte) (((~(cpu.A ^ add)) & (cpu.A ^ (byte) res)) >> 7);
-            cpu.P.C = (byte) (res >> 8);
-
-            // Store in accumulator
-            cpu.A = (byte) res;
-            cpu.P.N = (byte) (cpu.A >> 7);
-            cpu.P.Z = Flags.Zero(cpu.A);
+            cpu.A = cpu.Add(cpu.A, add, cpu.P.C);
+            cpu.SetFlags(cpu.A);
 
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
-        private static Cycle CMPimm = cpu => {
-            ushort q = (ushort) (((ushort) cpu.A | 0x0100) - ReadAddr(cpu, cpu.PC));
-            cpu.P.N = (byte) (q >> 7 & 1);
-            cpu.P.Z = Flags.Zero((byte) q);
+        private static Cycle CMPPC = cpu => {
+            ushort q = (ushort) (((ushort) cpu.A | 0x0100) - cpu.Read(cpu.PC));
+
             cpu.P.C = (byte) (q >> 8);
+            cpu.SetFlags((byte) q);
 
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
-        private static Cycle CPXimm = cpu => {
-            ushort q = (ushort) (((ushort) cpu.X | 0x0100) - ReadAddr(cpu, cpu.PC));
-            cpu.P.N = (byte) (q >> 7 & 1);
-            cpu.P.Z = Flags.Zero((byte) q);
+        private static Cycle CPXPC = cpu => {
+            ushort q = (ushort) (((ushort) cpu.X | 0x0100) - cpu.Read(cpu.PC));
+
             cpu.P.C = (byte) (q >> 8);
+            cpu.SetFlags((byte) q);
 
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
-        private static Cycle CPYimm = cpu => {
-            ushort q = (ushort) (((ushort) cpu.Y | 0x0100) - ReadAddr(cpu, cpu.PC));
-            cpu.P.N = (byte) (q >> 7 & 1);
-            cpu.P.Z = Flags.Zero((byte) q);
+        private static Cycle CPYPC = cpu => {
+            ushort q = (ushort) (((ushort) cpu.Y | 0x0100) - cpu.Read(cpu.PC));
+
             cpu.P.C = (byte) (q >> 8);
+            cpu.SetFlags((byte) q);
 
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
         private static Cycle JumpPC = cpu => {
             // fetch high address
-            cpu.PC = (ushort) (ReadAddr(cpu, cpu.PC) << 8);
+            cpu.PC = (ushort) (cpu.Read(cpu.PC) << 8);
 
             // copy low address byte
             cpu.PC |= cpu.val;
-            return true;
-        };
-
-        private static Cycle LDXPC = cpu => {
-            cpu.X = ReadAddr(cpu, cpu.PC);
-            cpu.P.N = (byte) (cpu.X >> 7);
-            cpu.P.Z = Flags.Zero(cpu.X);
-
-            unchecked { cpu.PC += 1; }
-            return true;
-        };
-
-        private static Cycle LDYPC = cpu => {
-            cpu.Y = ReadAddr(cpu, cpu.PC);
-            cpu.P.N = (byte) (cpu.Y >> 7);
-            cpu.P.Z = Flags.Zero(cpu.Y);
-
-            unchecked { cpu.PC += 1; }
-            return true;
         };
 
         private static Cycle LDAPC = cpu => {
-            cpu.A = ReadAddr(cpu, cpu.PC);
-            cpu.P.N = (byte) (cpu.A >> 7);
-            cpu.P.Z = Flags.Zero(cpu.A);
+            cpu.A = cpu.Read(cpu.PC);
+            cpu.SetFlags(cpu.A);
 
             unchecked { cpu.PC += 1; }
-            return true;
         };
 
-        private static Cycle STXzpg = cpu => {
-            WriteAddr(cpu, cpu.val, cpu.X);
-            return true;
+        private static Cycle LDXPC = cpu => {
+            cpu.X = cpu.Read(cpu.PC);
+            cpu.SetFlags(cpu.X);
+
+            unchecked { cpu.PC += 1; }
         };
 
-        private static Cycle STAzpg = cpu => {
-            WriteAddr(cpu, cpu.val, cpu.A);
-            return true;
+        private static Cycle LDYPC = cpu => {
+            cpu.Y = cpu.Read(cpu.PC);
+            cpu.SetFlags(cpu.Y);
+
+            unchecked { cpu.PC += 1; }
         };
+
+        private static Cycle STAzpg = cpu => cpu.Write(cpu.val, cpu.A);
+        private static Cycle STXzpg = cpu => cpu.Write(cpu.val, cpu.X);
 
         private static Cycle BITzpg = cpu => {
-            byte test = ReadAddr(cpu, cpu.val);
+            byte test = cpu.Read(cpu.val);
             cpu.P.N = (byte) (test >> 7);
             cpu.P.V = (byte) (test >> 6 & 1);
             cpu.P.Z = Flags.Zero((byte) (test & cpu.A));
-            return true;
         };
 
         private static Cycle SEC = cpu => {
             cpu.P.C = 1;
-            ReadAddr(cpu, cpu.PC);
-            return true;
+            cpu.Read(cpu.PC);
         };
 
         private static Cycle CLC = cpu => {
             cpu.P.C = 0;
-            ReadAddr(cpu, cpu.PC);
-            return true;
+            cpu.Read(cpu.PC);
         };
 
         private static Cycle SEI = cpu => {
             cpu.P.I = 1;
-            ReadAddr(cpu, cpu.PC);
-            return true;
+            cpu.Read(cpu.PC);
         };
 
         private static Cycle SED = cpu => {
             cpu.P.D = 1;
-            ReadAddr(cpu, cpu.PC);
-            return true;
+            cpu.Read(cpu.PC);
         };
 
         private static Cycle CLD = cpu => {
             cpu.P.D = 0;
-            ReadAddr(cpu, cpu.PC);
-            return true;
+            cpu.Read(cpu.PC);
         };
 
         private static Cycle CLV = cpu => {
             cpu.P.V = 0;
-            ReadAddr(cpu, cpu.PC);
-            return true;
+            cpu.Read(cpu.PC);
         };
 
-        private static Cycle BCS = cpu => {
-            Branch(cpu, cpu.P.C == 1);
-            return true;
-        };
-
-        private static Cycle BCC = cpu => {
-            Branch(cpu, cpu.P.C == 0);
-            return true;
-        };
-
-        private static Cycle BEQ = cpu => {
-            Branch(cpu, cpu.P.Z == 1);
-            return true;
-        };
-
-        private static Cycle BNE = cpu => {
-            Branch(cpu, cpu.P.Z == 0);
-            return true;
-        };
-
-        private static Cycle BVS = cpu => {
-            Branch(cpu, cpu.P.V == 1);
-            return true;
-        };
-
-        private static Cycle BVC = cpu => {
-            Branch(cpu, cpu.P.V == 0);
-            return true;
-        };
-
-        private static Cycle BPL = cpu => {
-            Branch(cpu, cpu.P.N == 0);
-            return true;
-        };
-
-        private static Cycle BMI = cpu => {
-            Branch(cpu, cpu.P.N == 1);
-            return true;
-        };
+        private static Cycle BCS = cpu => cpu.Branch(cpu.P.C == 1);
+        private static Cycle BCC = cpu => cpu.Branch(cpu.P.C == 0);
+        private static Cycle BEQ = cpu => cpu.Branch(cpu.P.Z == 1);
+        private static Cycle BNE = cpu => cpu.Branch(cpu.P.Z == 0);
+        private static Cycle BVS = cpu => cpu.Branch(cpu.P.V == 1);
+        private static Cycle BVC = cpu => cpu.Branch(cpu.P.V == 0);
+        private static Cycle BMI = cpu => cpu.Branch(cpu.P.N == 1);
+        private static Cycle BPL = cpu => cpu.Branch(cpu.P.N == 0);
 
         private static Cycle FixPC = cpu => {
             byte PCH = cpu.val;
-            byte next = ReadAddr(cpu, cpu.PC);
+            byte next = cpu.Read(cpu.PC);
 
             if ((byte) (cpu.PC >> 8) != PCH) {
                 // Different page
@@ -365,7 +282,6 @@ namespace NesSharp
             #endif
             }
 
-            return true;
         };
 
         private static Cycle PushP(bool B)
@@ -381,9 +297,8 @@ namespace NesSharp
                 cpu._instr = cpu.instr.Value.Name;
             #endif
 
-                WriteAddr(cpu, (ushort) (0x100 | cpu.S), cpu.P.Write());
+                cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
                 unchecked { cpu.S -= 1; }
-                return true;
             };
             else return cpu => {
                 // Interrupt hijack
@@ -395,9 +310,8 @@ namespace NesSharp
                 cpu._instr = cpu.instr.Value.Name;
             #endif
 
-                WriteAddr(cpu, (ushort) (0x100 | cpu.S), cpu.P.Write());
+                cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
                 unchecked { cpu.S -= 1; }
-                return true;
             };
         }
 
@@ -405,9 +319,8 @@ namespace NesSharp
         {
             return cpu => {
                 cpu.PC &= 0xFF00;
-                cpu.PC |= ReadAddr(cpu, addr);
+                cpu.PC |= cpu.Read(addr);
                 cpu.P.I = 1; // Set I flag
-                return true;
             };
         }
 
@@ -415,8 +328,7 @@ namespace NesSharp
         {
             return cpu => {
                 cpu.PC &= 0x00FF;
-                cpu.PC |= (ushort) (ReadAddr(cpu, addr) << 8);
-                return true;
+                cpu.PC |= (ushort) (cpu.Read(addr) << 8);
             };
         }
 
@@ -426,7 +338,7 @@ namespace NesSharp
 
         private static Cycle Jam = cpu => {
             byte opcode = cpu.val;
-            throw new OpcodeException(string.Format("Unknown opcode {0:X2}", opcode));
+            throw new OpcodeException(string.Format("Unknown opcode {0:X2}", cpu.val));
         };
 
         private static Instruction IRQInstruction = new Instruction("IRQ", new Cycle[] {
@@ -559,7 +471,7 @@ namespace NesSharp
 /* 66 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* 67 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* 68 */    new Instruction("PLA impl", new Cycle[] { FetchPC, DummyFetchPC, IncSP, PullA }),
-/* 69 */    new Instruction("ADC #", new Cycle[] { FetchPC, ADCimm }),
+/* 69 */    new Instruction("ADC #", new Cycle[] { FetchPC, ADCPC }),
 /* 6a */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* 6b */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* 6c */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -646,7 +558,7 @@ namespace NesSharp
 /* bd */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* be */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* bf */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-/* c0 */    new Instruction("CPY #", new Cycle[] { FetchPC, CPYimm }),
+/* c0 */    new Instruction("CPY #", new Cycle[] { FetchPC, CPYPC }),
 /* c1 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* c2 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* c3 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -655,7 +567,7 @@ namespace NesSharp
 /* c6 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* c7 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* c8 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-/* c9 */    new Instruction("CMP #", new Cycle[] { FetchPC, CMPimm }),
+/* c9 */    new Instruction("CMP #", new Cycle[] { FetchPC, CMPPC }),
 /* ca */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* cb */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* cc */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -678,7 +590,7 @@ namespace NesSharp
 /* dd */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* de */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* df */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-/* e0 */    new Instruction("CPX #", new Cycle[] { FetchPC, CPXimm }),
+/* e0 */    new Instruction("CPX #", new Cycle[] { FetchPC, CPXPC }),
 /* e1 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* e2 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* e3 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
@@ -687,7 +599,7 @@ namespace NesSharp
 /* e6 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* e7 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* e8 */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
-/* e9 */    new Instruction("SBC #", new Cycle[] { FetchPC, SBCimm }),
+/* e9 */    new Instruction("SBC #", new Cycle[] { FetchPC, SBCPC }),
 /* ea */    new Instruction("NOP impl", new Cycle[] { FetchPC, DummyFetchPC }),
 /* eb */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),
 /* ec */    new Instruction("JAM", new Cycle[] { FetchPC, Jam }),

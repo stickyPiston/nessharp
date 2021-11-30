@@ -3,7 +3,7 @@ using System;
 namespace NesSharp
 {
 
-    using Cycle = Func<CPU, bool>;
+    using Cycle = Action<CPU>;
 
     public partial class CPU
     {
@@ -177,7 +177,9 @@ namespace NesSharp
             }
 
             // Execute instruction cycle
-            if (instr.Value.Cycles[cycle](this) && instr.Value.Cycles.Length > cycle + 1)
+            instr.Value.Cycles[cycle](this);
+            
+            if (instr.Value.Cycles.Length > cycle + 1)
             {
                 // Reset IRQ signal (should only be high for 1 cycle)
                 if (pending == HardwareInterrupt.IRQ) pending = null;
