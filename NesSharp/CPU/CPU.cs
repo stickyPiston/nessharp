@@ -63,17 +63,28 @@ namespace NesSharp
         public Flags P;
 
         // Micro-instruction data
+        enum AddressingMode
+        {
+            NONE,
+            ACC, IMP, IMM, REL,
+            ZERO, ZEROX, ZEROY,
+            IND, INDX, INDY, INDYW,
+            ABS, ABSX, ABSXW, ABSY, ABSYW,
+        }
+
         struct Instruction
         {
         #if DEBUG
             public string Name;
         #endif
+            public AddressingMode Mode;
             public Cycle[] Cycles;
 
-            public Instruction(string name, Cycle[] cycles) {
+            public Instruction(string name, AddressingMode mode, Cycle[] cycles) {
             #if DEBUG
                 Name = name;
             #endif
+                Mode = mode;
                 Cycles = cycles;
             }
         }
@@ -154,12 +165,19 @@ namespace NesSharp
         }
 
         public int CycleInstruction() {
-            Cycle();
             int cycles = 1;
-            while (instr != null) {
+
+            if (this.cycle != 1) {
                 Cycle();
                 cycles += 1;
             }
+            Cycle();
+            
+            while (this.cycle > 1 && this.instr != null) {
+                Cycle();
+                cycles += 1;
+            } 
+
             return cycles;
         }
 
@@ -189,11 +207,19 @@ namespace NesSharp
             }
 
             // Execute instruction cycle
-            instr.Value.Cycles[cycle](this);
-
-            if (instr.Value.Cycles.Length <= cycle + 1)
+            Cycle[] mode = addressingInstructions[(byte) instr.Value.Mode];
+            if (cycle < mode.Length)
             {
-                // Instruction ended
+                mode[cycle](this);
+            }
+            else
+            {
+                instr.Value.Cycles[cycle - mode.Length](this);
+            }
+
+            // Check if instruction ended
+            if (instr.Value.Cycles.Length <= cycle + 1 - mode.Length)
+            {
                 instr = null;
             }
 

@@ -55,17 +55,17 @@ namespace NesSharpTests
             bus.Write(0xC003, 0x69); // ADC
             bus.Write(0xC004, 0b11111111); // -1
 
-            cpu.CycleInstruction(); // SEC
-            cpu.CycleInstruction(); // LDA
-            cpu.CycleInstruction(); // ADC
-
-            Assert.AreEqual(cpu.P.V, 0);
-
             bus.Write(0xC005, 0x18); // CLC
             bus.Write(0xC006, 0xA9); // LDA
             bus.Write(0xC007, 0b10000000); // -128
             bus.Write(0xC008, 0x69); // ADC
             bus.Write(0xC009, 0b11111111); // -1
+
+            cpu.CycleInstruction(); // SEC
+            cpu.CycleInstruction(); // LDA
+            cpu.CycleInstruction(); // ADC
+
+            Assert.AreEqual(cpu.P.V, 0);
 
             cpu.CycleInstruction(); // CLC
             cpu.CycleInstruction(); // LDA
@@ -112,6 +112,7 @@ namespace NesSharpTests
             cpu.CycleInstruction();
             
             // JAM instruction
+            cpu.Cycle();
             cpu.Cycle();
 
             try {

@@ -21,14 +21,24 @@ namespace NesSharp
 
         private void SetInstructionCheckPending(Instruction instr)
         {
-            if (CheckPending())
-            {
-                this.cycle = 255; // wraps back to 0 next cycle
-            }
+            if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle}
             else
             {
                 SetInstruction(instr);
                 this.cycle = 0;
+            }
+        }
+
+        private void NextInstruction()
+        {
+            if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle
+            else
+            {
+                byte next = Read(PC);
+                unchecked { PC += 1; }
+
+                SetInstruction(instructions[next]);
+                cycle = 0;
             }
         }
 
@@ -103,6 +113,11 @@ namespace NesSharp
             unchecked { cpu.PC += 1; }
         };
 
+        private static Cycle ZpgPC = cpu => {
+            cpu.addr = cpu.Read(cpu.PC);
+            unchecked { cpu.PC += 1; }
+        };
+
         private static Cycle DummyPushStack = cpu => {
             cpu.Read((ushort) (0x100 | cpu.S));
             unchecked { cpu.S -= 1; }
@@ -148,67 +163,58 @@ namespace NesSharp
             cpu.P.Read(cpu.Read((ushort) (0x100 | cpu.S)));
         };
 
-        private static Cycle ANDimm = cpu => {
-            cpu.A &= cpu.Read(cpu.PC);
+        private static Cycle AND = cpu => {
+            cpu.A &= cpu.val;
             cpu.SetFlags(cpu.A);
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle ORAimm = cpu => {
-            cpu.A |= cpu.Read(cpu.PC);
+        private static Cycle ORA = cpu => {
+            cpu.A |= cpu.val;
             cpu.SetFlags(cpu.A);
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle EORimm = cpu => {
-            cpu.A ^= cpu.Read(cpu.PC);
+        private static Cycle EOR = cpu => {
+            cpu.A ^= cpu.val;
             cpu.SetFlags(cpu.A);
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle ADCPC = cpu => {
-            byte add = cpu.Read(cpu.PC);
-
-            cpu.A = cpu.Add(cpu.A, add, cpu.P.C);
+        private static Cycle ADC = cpu => {
+            cpu.A = cpu.Add(cpu.A, cpu.val, cpu.P.C);
             cpu.SetFlags(cpu.A);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle SBCPC = cpu => {
-            byte add = (byte) ~cpu.Read(cpu.PC);
-
-            cpu.A = cpu.Add(cpu.A, add, cpu.P.C);
+        private static Cycle SBC = cpu => {
+            cpu.A = cpu.Add(cpu.A, (byte) ~cpu.val, cpu.P.C);
             cpu.SetFlags(cpu.A);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle CMPPC = cpu => {
-            ushort q = (ushort) (((ushort) cpu.A | 0x0100) - cpu.Read(cpu.PC));
+        private static Cycle CMP = cpu => {
+            ushort q = (ushort) (((ushort) cpu.A | 0x0100) - cpu.val);
 
             cpu.P.C = (byte) (q >> 8);
             cpu.SetFlags((byte) q);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle CPXPC = cpu => {
-            ushort q = (ushort) (((ushort) cpu.X | 0x0100) - cpu.Read(cpu.PC));
+        private static Cycle CPX = cpu => {
+            ushort q = (ushort) (((ushort) cpu.X | 0x0100) - cpu.val);
 
             cpu.P.C = (byte) (q >> 8);
             cpu.SetFlags((byte) q);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle CPYPC = cpu => {
-            ushort q = (ushort) (((ushort) cpu.Y | 0x0100) - cpu.Read(cpu.PC));
+        private static Cycle CPY = cpu => {
+            ushort q = (ushort) (((ushort) cpu.Y | 0x0100) - cpu.val);
 
             cpu.P.C = (byte) (q >> 8);
             cpu.SetFlags((byte) q);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
         private static Cycle JumpPC = cpu => {
@@ -219,32 +225,29 @@ namespace NesSharp
             cpu.PC |= cpu.val;
         };
 
-        private static Cycle LDAPC = cpu => {
-            cpu.A = cpu.Read(cpu.PC);
+        private static Cycle LDA = cpu => {
+            cpu.A = cpu.val;
             cpu.SetFlags(cpu.A);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle LDXPC = cpu => {
-            cpu.X = cpu.Read(cpu.PC);
+        private static Cycle LDX = cpu => {
+            cpu.X = cpu.val;
             cpu.SetFlags(cpu.X);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle LDYPC = cpu => {
-            cpu.Y = cpu.Read(cpu.PC);
+        private static Cycle LDY = cpu => {
+            cpu.Y = cpu.val;
             cpu.SetFlags(cpu.Y);
-
-            unchecked { cpu.PC += 1; }
+            cpu.NextInstruction();
         };
 
-        private static Cycle STAzpg = cpu => cpu.Write(cpu.val, cpu.A);
-        private static Cycle STXzpg = cpu => cpu.Write(cpu.val, cpu.X);
+        private static Cycle STA = cpu => cpu.Write(cpu.addr, cpu.A);
+        private static Cycle STX = cpu => cpu.Write(cpu.addr, cpu.X);
 
-        private static Cycle BITzpg = cpu => {
-            byte test = cpu.Read(cpu.val);
+        private static Cycle BIT = cpu => {
+            byte test = cpu.Read(cpu.addr);
             cpu.P.N = (byte) (test >> 7);
             cpu.P.V = (byte) (test >> 6 & 1);
             cpu.P.Z = Flags.Zero((byte) (test & cpu.A));
@@ -252,32 +255,32 @@ namespace NesSharp
 
         private static Cycle SEC = cpu => {
             cpu.P.C = 1;
-            cpu.Read(cpu.PC);
+            cpu.NextInstruction();
         };
 
         private static Cycle CLC = cpu => {
             cpu.P.C = 0;
-            cpu.Read(cpu.PC);
+            cpu.NextInstruction();
         };
 
         private static Cycle SEI = cpu => {
             cpu.P.I = 1;
-            cpu.Read(cpu.PC);
+            cpu.NextInstruction();
         };
 
         private static Cycle SED = cpu => {
             cpu.P.D = 1;
-            cpu.Read(cpu.PC);
+            cpu.NextInstruction();
         };
 
         private static Cycle CLD = cpu => {
             cpu.P.D = 0;
-            cpu.Read(cpu.PC);
+            cpu.NextInstruction();
         };
 
         private static Cycle CLV = cpu => {
             cpu.P.V = 0;
-            cpu.Read(cpu.PC);
+            cpu.NextInstruction();
         };
 
         private static Cycle BCS = cpu => cpu.Branch(cpu.P.C == 1);
