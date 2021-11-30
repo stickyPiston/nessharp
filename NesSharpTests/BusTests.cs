@@ -2,7 +2,7 @@ using NUnit.Framework;
 using NesSharp;
 
 namespace NesSharpTests {
-    class ChipA {
+    class ChipA : IAddressable {
         private Bus bus;
         public ChipA(Bus bus) { this.bus = bus; }
 
@@ -16,7 +16,7 @@ namespace NesSharpTests {
         public void Write(short _, byte __) { }
     }
 
-    class ChipB : NesSharp.IAddressable {
+    class ChipB : IAddressable {
         private Bus bus;
         public ChipB(Bus bus) { this.bus = bus; }
 
