@@ -1,11 +1,15 @@
 using NUnit.Framework;
+
+#if !SERVER
 using System;
 using System.Threading;
 using SFML.Graphics;
 using SFML.Window;
 using SFML.Audio;
+#endif
 
 namespace NesSharpTests {
+#if !SERVER
   public class WindowTests {
     [SetUp]
     public void Setup() { }
@@ -57,4 +61,5 @@ namespace NesSharpTests {
       return 0;
     }
   }
+#endif
 }
