@@ -95,7 +95,9 @@ namespace NesSharp
             NMI, IRQ
         }
 
-        private HardwareInterrupt? pending;
+        private HardwareInterrupt? incoming; // next cycle
+        private HardwareInterrupt? pending;  // this cycle
+        private HardwareInterrupt? previous; // previous cycle
 
         public CPU(IAddressable bus)
         {
@@ -110,24 +112,41 @@ namespace NesSharp
         
         public void Reset()
         {
-            instr = ResetInstruction;
-        #if DEBUG
-            _instr = instr.Value.Name;
-        #endif
+            SetInstruction(ResetInstruction);
+            this.cycle = 0;
         }
 
         public void AssertNMI()
         {
-            pending = HardwareInterrupt.NMI;
+            incoming = HardwareInterrupt.NMI;
         }
 
         public void AssertIRQ()
         {
-            // A pending NMI interrupt has priority
-            if (pending != HardwareInterrupt.NMI)
+            // An incoming NMI interrupt has priority
+            // Ignore if interrupt disable flag is 1
+            if (incoming != HardwareInterrupt.NMI && P.I == 0)
             {
-                pending = HardwareInterrupt.IRQ;
+                incoming = HardwareInterrupt.IRQ;
             }
+        }
+
+        private void SetInstruction(Instruction instr)
+        {
+            this.instr = instr;
+        #if DEBUG
+            _instr = instr.Name;
+        #endif
+        }
+
+        private void CycleEnd() {
+            previous = pending;
+
+            // An incoming NMI interrupt has priority
+            // Reset IRQ signal (should only be high for 1 cycle)
+            if (pending == HardwareInterrupt.IRQ) pending = incoming;
+
+            incoming = null;
         }
 
         public void Cycle(int amount) {
@@ -152,24 +171,17 @@ namespace NesSharp
                 if (pending != null)
                 {
                     // Poll next interrupt
-                    instr = pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction;
-                #if DEBUG
-                    _instr = instr.Value.Name;
-                #endif
+                    SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                     cycle = 0;
                 }
                 else
                 {
                     // Fetch next instruction, execute first cycle
                     FetchPC(this);
-                    instr = instructions[val];
-                #if DEBUG
-                    _instr = instr.Value.Name;
-                #endif
+                    SetInstruction(instructions[val]);
+                    
                     cycle = 1;
-
-                    // Reset IRQ signal (should only be high for 1 cycle)
-                    if (pending == HardwareInterrupt.IRQ) pending = null;
+                    CycleEnd();
 
                     // Return so we don't execute another cycle
                     return;
@@ -178,23 +190,16 @@ namespace NesSharp
 
             // Execute instruction cycle
             instr.Value.Cycles[cycle](this);
-            
-            if (instr.Value.Cycles.Length > cycle + 1)
-            {
-                // Reset IRQ signal (should only be high for 1 cycle)
-                if (pending == HardwareInterrupt.IRQ) pending = null;
-            }
-            else
+
+            if (instr.Value.Cycles.Length <= cycle + 1)
             {
                 // Instruction ended
                 instr = null;
-
-                // Reset NMI signal (should be reset after NMI handling)
-                pending = null;
             }
 
             // Continue to next cycle
-            cycle += 1;
+            CycleEnd();
+            unchecked { cycle += 1; }
         }
 
         public string DumpCycle() {

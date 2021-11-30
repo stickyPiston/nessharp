@@ -8,7 +8,32 @@ namespace NesSharp
     public partial class CPU
     {
         // Micro-micro-instructions
-        private byte Read(ushort addr) {
+        private bool CheckPending(bool irq = true)
+        {
+            if (pending != null && (irq || pending == HardwareInterrupt.NMI))
+            {
+                // Poll next interrupt
+                SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
+                return true;
+            }
+            return false;
+        }
+
+        private void SetInstructionCheckPending(Instruction instr)
+        {
+            if (CheckPending())
+            {
+                this.cycle = 255; // wraps back to 0 next cycle
+            }
+            else
+            {
+                SetInstruction(instr);
+                this.cycle = 0;
+            }
+        }
+
+        private byte Read(ushort addr)
+        {
         #if DEBUG
             this._read = true;
             this._addr = addr;
@@ -19,7 +44,8 @@ namespace NesSharp
         #endif
         }
 
-        private void Write(ushort addr, byte b) {
+        private void Write(ushort addr, byte b)
+        {
         #if DEBUG
             this._read = false;
             this._addr = addr;
@@ -28,19 +54,22 @@ namespace NesSharp
             this.bus.Write(addr, b);
         }
 
-        private void SetFlags(byte b) {
+        private void SetFlags(byte b)
+        {
             this.P.N = (byte) (b >> 7);
             this.P.Z = Flags.Zero(b);
         }
 
-        private byte Add(byte a, byte b, byte c) {
+        private byte Add(byte a, byte b, byte c)
+        {
             ushort res = (ushort) ((ushort) a + b + c);
             this.P.V = (byte) (((~(a ^ b)) & (a ^ (byte) res)) >> 7);
             this.P.C = (byte) (res >> 8);
             return (byte) res;
         }
 
-        private void Branch(bool b) {
+        private void Branch(bool b)
+        {
             byte operand = this.val;
             byte next = Read(this.PC);
 
@@ -61,11 +90,7 @@ namespace NesSharp
             } else {
                 // Next instruction
                 unchecked { this.PC += 1; }
-                this.instr = instructions[next];
-                this.cycle = 0;
-            #if DEBUG
-                this._instr = this.instr.Value.Name;
-            #endif
+                SetInstructionCheckPending(instructions[next]);
             }
         }
 
@@ -275,11 +300,13 @@ namespace NesSharp
             } else {
                 // Next instruction
                 unchecked { cpu.PC += 1; }
-                cpu.instr = instructions[next];
-                cpu.cycle = 0;
-            #if DEBUG
-                cpu._instr = cpu.instr.Value.Name;
-            #endif
+
+                // "a taken non-page-crossing branch ignores IRQ/NMI during its last clock, so that next instruction executes before the IRQ"
+                if (cpu.pending != null && cpu.previous == null) {
+                    cpu.SetInstruction(instructions[next]);
+                } else {
+                    cpu.SetInstructionCheckPending(instructions[next]);
+                }
             }
 
         };
@@ -287,28 +314,24 @@ namespace NesSharp
         private static Cycle PushP(bool B)
         {
             if (B) return cpu => {
-                // Interrupt hijack
-                if (cpu.pending == HardwareInterrupt.NMI) cpu.instr = NMIInstruction;
-                if (cpu.pending == HardwareInterrupt.IRQ) cpu.instr = IRQInstruction;
+                // Interrupt hijack (all hardware interrupts)
+                cpu.CheckPending(true);
 
                 cpu.P.B = 1; // Set B flag
-
-            #if DEBUG
-                cpu._instr = cpu.instr.Value.Name;
-            #endif
 
                 cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
                 unchecked { cpu.S -= 1; }
             };
             else return cpu => {
-                // Interrupt hijack
-                if (cpu.pending == HardwareInterrupt.NMI) cpu.instr = NMIInstruction;
+                // Interrupt hijack (only NMI)
+                cpu.CheckPending(false);
+
+                if (cpu.pending == HardwareInterrupt.NMI) {
+                    // Reset NMI on handle
+                    cpu.pending = null;
+                }
 
                 cpu.P.B = 0; // Unset B flag
-
-            #if DEBUG
-                cpu._instr = cpu.instr.Value.Name;
-            #endif
 
                 cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
                 unchecked { cpu.S -= 1; }
