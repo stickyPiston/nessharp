@@ -74,27 +74,26 @@ namespace NesSharp
 
         struct Instruction
         {
-        #if DEBUG
             public string Name;
-        #endif
             public AddressingMode Mode;
             public Cycle[] Cycles;
 
             public Instruction(string name, AddressingMode mode, Cycle[] cycles) {
-            #if DEBUG
                 Name = name;
-            #endif
                 Mode = mode;
-                Cycles = cycles;
+
+                Cycle[] modeCycles = addressingInstructions[(int) mode];
+                Cycles = new Cycle[modeCycles.Length + cycles.Length];
+                modeCycles.CopyTo(Cycles, 0);
+                cycles.CopyTo(Cycles, modeCycles.Length);
             }
         }
 
-        private Instruction? instr;
+        private Instruction instr;
         private byte cycle, val;
         private ushort ptr, addr;
 
     #if DEBUG
-        private string _instr;
         private bool _read;
         private ushort _addr;
         private byte _data;
@@ -123,7 +122,7 @@ namespace NesSharp
         
         public void Reset()
         {
-            SetInstruction(ResetInstruction);
+            SetInstruction(RESETInstruction);
             this.cycle = 0;
         }
 
@@ -145,9 +144,6 @@ namespace NesSharp
         private void SetInstruction(Instruction instr)
         {
             this.instr = instr;
-        #if DEBUG
-            _instr = instr.Name;
-        #endif
         }
 
         private void CycleEnd() {
@@ -173,7 +169,7 @@ namespace NesSharp
             }
             Cycle();
             
-            while (this.cycle > 1 && this.instr != null) {
+            while (this.cycle > 1 && this.instr.Cycles.Length > this.cycle) {
                 Cycle();
                 cycles += 1;
             } 
@@ -184,7 +180,7 @@ namespace NesSharp
         public void Cycle()
         {
             // Get next instruction
-            if (instr == null)
+            if (instr.Cycles.Length <= cycle)
             {
                 if (pending != null)
                 {
@@ -207,21 +203,7 @@ namespace NesSharp
             }
 
             // Execute instruction cycle
-            Cycle[] mode = addressingInstructions[(byte) instr.Value.Mode];
-            if (cycle < mode.Length)
-            {
-                mode[cycle](this);
-            }
-            else
-            {
-                instr.Value.Cycles[cycle - mode.Length](this);
-            }
-
-            // Check if instruction ended
-            if (instr.Value.Cycles.Length <= cycle + 1 - mode.Length)
-            {
-                instr = null;
-            }
+            instr.Cycles[cycle](this);
 
             // Continue to next cycle
             CycleEnd();
@@ -231,10 +213,10 @@ namespace NesSharp
         public string DumpCycle() {
         #if DEBUG
             return string.Format("{6} #{7} | {11} ${12:X4} = {13:X2} | ptr:{8:X4} addr:{9:X4} val:{10:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} SP:01{4:X2} PC:{5:X4}",
-                A, X, Y, P.Dump(), S, PC, _instr.PadRight(9, ' '), cycle - 1, ptr, addr, val, _read ? "READ " : "WRITE", _addr, _data);
+                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, ptr, addr, val, _read ? "READ " : "WRITE", _addr, _data);
         #else
-            return string.Format("#{6} | ptr:{7:X4} addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
-                A, X, Y, P.Dump(), S, PC, cycle - 1, ptr, addr, val);
+            return string.Format("{6} #{7} | ptr:{8:X4} addr:{9:X4} val:{10:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
+                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, ptr, addr, val);
         #endif
         }
     }

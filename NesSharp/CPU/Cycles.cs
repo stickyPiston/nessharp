@@ -21,7 +21,7 @@ namespace NesSharp
 
         private void SetInstructionCheckPending(Instruction instr)
         {
-            if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle}
+            if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle
             else
             {
                 SetInstruction(instr);
