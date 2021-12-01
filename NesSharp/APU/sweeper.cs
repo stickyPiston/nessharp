@@ -15,7 +15,7 @@ namespace NesSharp
         private ushort change = 0;
         public bool mute = false;
 
-        //track
+        //tracks
         public void ppuClock(ushort target)
         {
             if (enabled)
