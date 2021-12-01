@@ -16,7 +16,7 @@ namespace NesSharpTests
 
         public void Write(ushort addr, byte data)
         {
-            if (addr == 0 && data != 0) throw new Exception(string.Format("Wrong CPU implementation! Error code {0:X2}", data));
+            // if (addr == 0 && data != 0) throw new Exception(string.Format("Wrong CPU implementation! Error code {0:X2}", data));
             this.data[addr] = data;
         }
     }
@@ -35,10 +35,10 @@ namespace NesSharpTests
         [Test]
         public void BitLogic()
         {
-            Assert.AreEqual(CPU.Flags.NonZero(42), 1);
-            Assert.AreEqual(CPU.Flags.NonZero(0), 0);
-            Assert.AreEqual(CPU.Flags.Zero(42), 0);
-            Assert.AreEqual(CPU.Flags.Zero(0), 1);
+            Assert.AreEqual(1, CPU.Flags.NonZero(42));
+            Assert.AreEqual(0, CPU.Flags.NonZero(0));
+            Assert.AreEqual(0, CPU.Flags.Zero(42));
+            Assert.AreEqual(1, CPU.Flags.Zero(0));
         }
 
         [Test]
@@ -46,8 +46,6 @@ namespace NesSharpTests
         {
             bus.Write(0xFFFC, 0x00);
             bus.Write(0xFFFD, 0xC0);
-
-            cpu.CycleInstruction(); // RESET
 
             bus.Write(0xC000, 0x38); // SEC
             bus.Write(0xC001, 0xA9); // LDA
@@ -61,17 +59,19 @@ namespace NesSharpTests
             bus.Write(0xC008, 0x69); // ADC
             bus.Write(0xC009, 0b11111111); // -1
 
+            cpu.CycleInstruction(); // RESET
+
             cpu.CycleInstruction(); // SEC
             cpu.CycleInstruction(); // LDA
             cpu.CycleInstruction(); // ADC
 
-            Assert.AreEqual(cpu.P.V, 0);
+            Assert.AreEqual(0, cpu.P.V);
 
             cpu.CycleInstruction(); // CLC
             cpu.CycleInstruction(); // LDA
             cpu.CycleInstruction(); // ADC
 
-            Assert.AreEqual(cpu.P.V, 1);
+            Assert.AreEqual(1, cpu.P.V);
         }
 
         [Test]
@@ -99,6 +99,12 @@ namespace NesSharpTests
                 Console.WriteLine(cycle.ToString().PadLeft(5, '0') + " | " + cpu.DumpCycle());
                 cycle += 1;
             }
+        }
+
+        [Test]
+        public void LegalInstructions()
+        {
+            Assert.AreEqual(152, CPU.CountLegalInstructions());
         }
 
         [Test]

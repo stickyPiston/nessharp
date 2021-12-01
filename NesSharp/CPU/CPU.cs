@@ -68,8 +68,8 @@ namespace NesSharp
             NONE,
             ACC, IMP, IMM, REL,
             ZERO, ZEROX, ZEROY,
-            IND, INDX, INDY, INDYW,
-            ABS, ABSX, ABSXW, ABSY, ABSYW,
+            IND, INDX, INDY,
+            ABS, ABSX, ABSY,
         }
 
         struct Instruction
@@ -78,14 +78,19 @@ namespace NesSharp
             public AddressingMode Mode;
             public Cycle[] Cycles;
 
-            public Instruction(string name, AddressingMode mode, Cycle[] cycles) {
+            public Instruction(string name, AddressingMode mode, bool readsAddr, Cycle[] cycles, bool writesAddr = false) {
                 Name = name;
                 Mode = mode;
 
                 Cycle[] modeCycles = addressingInstructions[(int) mode];
-                Cycles = new Cycle[modeCycles.Length + cycles.Length];
+                Cycles = new Cycle[modeCycles.Length + cycles.Length + (readsAddr ? 1 : 0) + (writesAddr ? 1 : 0)];
+
                 modeCycles.CopyTo(Cycles, 0);
-                cycles.CopyTo(Cycles, modeCycles.Length);
+                if (readsAddr)
+                    Cycles[modeCycles.Length] = FetchAddr;
+                cycles.CopyTo(Cycles, modeCycles.Length + (readsAddr ? 1 : 0));
+                if (writesAddr)
+                    Cycles[modeCycles.Length + cycles.Length + (readsAddr ? 1 : 0)] = WriteVal;
             }
         }
 
