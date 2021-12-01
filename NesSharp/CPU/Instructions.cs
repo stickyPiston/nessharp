@@ -9,18 +9,18 @@ namespace NesSharp
     {
         private static Cycle[][] addressingInstructions = {
 /* NONE  */ new Cycle[] {},
-/* ACC   */ new Cycle[] { FetchPC, FetchAcc },
-/* IMP   */ new Cycle[] { FetchPC, DummyFetchPC },
-/* IMM   */ new Cycle[] { FetchPC, FetchPC },
-/* REL   */ new Cycle[] { FetchPC, FetchPC },
-/* ZERO  */ new Cycle[] { FetchPC, LowPC },
-/* ZEROX */ new Cycle[] { FetchPC, LowPC, LowAddX },
-/* ZEROY */ new Cycle[] { FetchPC, LowPC, LowAddY },
-/* INDX  */ new Cycle[] { FetchPC, FetchPC, ValAddX, LowVal, HighVal },
-/* INDY  */ new Cycle[] { FetchPC, FetchPC, LowVal, HighValAddY, FixAddr },
-/* ABS   */ new Cycle[] { FetchPC, LowPC, HighPC },
-/* ABSX  */ new Cycle[] { FetchPC, LowPC, HighPCAddX, FixAddr },
-/* ABSY  */ new Cycle[] { FetchPC, LowPC, HighPCAddY, FixAddr },
+/* ACC   */ new Cycle[] { ValFromPC, ValFromAcc },
+/* IMP   */ new Cycle[] { ValFromPC, DummyReadAtPC },
+/* IMM   */ new Cycle[] { ValFromPC, ValFromPC },
+/* REL   */ new Cycle[] { ValFromPC, ValFromPC },
+/* ZERO  */ new Cycle[] { ValFromPC, LowFromPC },
+/* ZEROX */ new Cycle[] { ValFromPC, LowFromPC, LowAddX },
+/* ZEROY */ new Cycle[] { ValFromPC, LowFromPC, LowAddY },
+/* INDX  */ new Cycle[] { ValFromPC, ValFromPC, ValAddX, LowFromVal, HighFromVal },
+/* INDY  */ new Cycle[] { ValFromPC, ValFromPC, LowFromVal, HighFromValAddY, FixAddr },
+/* ABS   */ new Cycle[] { ValFromPC, LowFromPC, HighFromPC },
+/* ABSX  */ new Cycle[] { ValFromPC, LowFromPC, HighFromPCAddX, FixAddr },
+/* ABSY  */ new Cycle[] { ValFromPC, LowFromPC, HighFromPCAddY, FixAddr },
         };
 
         private static string[] addressingNames = {
@@ -40,8 +40,8 @@ namespace NesSharp
         };
 
         private static Instruction IRQInstruction = new Instruction("IRQ", AddressingMode.NONE, false, new Cycle[] {
-            DummyFetchPC,       // dummy read
-            DummyFetchPC,       // dummy read
+            DummyReadAtPC,      // dummy read
+            DummyReadAtPC,      // dummy read
             PushPCH,            // push PC to stack 
             PushPCL,
             PushP(false),       // push P to stack with B = false
@@ -49,8 +49,8 @@ namespace NesSharp
             FetchPCHigh(0xFFFF),
         });
         private static Instruction NMIInstruction = new Instruction("NMI", AddressingMode.NONE, false, new Cycle[] {
-            DummyFetchPC,       // dummy read
-            DummyFetchPC,       // dummy read
+            DummyReadAtPC,      // dummy read
+            DummyReadAtPC,      // dummy read
             PushPCH,            // push PC to stack 
             PushPCL,
             PushP(false),       // push P to stack with B = false
@@ -58,7 +58,7 @@ namespace NesSharp
             FetchPCHigh(0xFFFB),
         });
         private static Instruction RESETInstruction = new Instruction("RESET", AddressingMode.NONE, false, new Cycle[] {
-            DummyFetchPC,   DummyFetchPC,   DummyFetchPC,   // dummy reads (I'm not sure why there are 3)
+            DummyReadAtPC,  DummyReadAtPC,  DummyReadAtPC,  // dummy reads (I'm not sure why there are 3)
             DummyPushStack, DummyPushStack, DummyPushStack, // decrement stack 3 times
             FetchPCLow(0xFFFC),                             // fetch PC, set I flag
             FetchPCHigh(0xFFFD),
@@ -212,9 +212,9 @@ namespace NesSharp
 
             // Rest of the instructions
             instructions[0x00] = new Instruction("BRK impl",  AddressingMode.IMP, false, new Cycle[] { PushPCH, PushPCL, PushP(true), FetchPCLow(0xFFFE), FetchPCHigh(0xFFFF) });
-            instructions[0x20] = new Instruction("JSR abs",   AddressingMode.IMM, false, new Cycle[] { DummyPeekStack, PushPCH, PushPCL, JumpPC });
+            instructions[0x20] = new Instruction("JSR abs",   AddressingMode.IMM, false, new Cycle[] { DummyReadAtSP, PushPCH, PushPCL, JumpPC });
             instructions[0x40] = new Instruction("RTI impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullP(true), PullPCL, PullPCH });
-            instructions[0x60] = new Instruction("RTS impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullPCL, PullPCH, FetchPC });
+            instructions[0x60] = new Instruction("RTS impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullPCL, PullPCH, ValFromPC });
 
             instructions[0x10] = new Instruction("BPL rel",   AddressingMode.REL, false, new Cycle[] { BPL, FixPC });
             instructions[0x30] = new Instruction("BMI rel",   AddressingMode.REL, false, new Cycle[] { BMI, FixPC });

@@ -105,19 +105,19 @@ namespace NesSharp
         }
 
         // Micro-instructions
-        private static Cycle DummyFetchPC = cpu => cpu.Read(cpu.PC);
-        private static Cycle DummyPeekStack = cpu => cpu.Read((ushort) (0x100 | cpu.S));
+        private static Cycle DummyReadAtPC = cpu => cpu.Read(cpu.PC);
+        private static Cycle DummyReadAtSP = cpu => cpu.Read((ushort) (0x100 | cpu.S));
 
-        private static Cycle FetchPC = cpu => {
+        private static Cycle ValFromPC = cpu => {
             cpu.val = cpu.Read(cpu.PC);
             unchecked { cpu.PC += 1; }
         };
 
-        private static Cycle FetchAddr = cpu => {
+        private static Cycle ValFromAddr = cpu => {
             cpu.val = cpu.Read(cpu.addr);
         };
 
-        private static Cycle FetchAcc = cpu => {
+        private static Cycle ValFromAcc = cpu => {
             cpu.Read(cpu.PC);
             cpu.val = cpu.A;
         };
@@ -139,15 +139,15 @@ namespace NesSharp
             cpu.addr &= 0x00FF;
         };
 
-        private static Cycle LowVal = cpu => {
+        private static Cycle LowFromVal = cpu => {
             cpu.addr = cpu.Read(cpu.val);
         };
 
-        private static Cycle HighVal = cpu => {
+        private static Cycle HighFromVal = cpu => {
             unchecked { cpu.addr |= (ushort) (cpu.Read((byte) (cpu.val + 1)) << 8); }
         };
 
-        private static Cycle HighValAddY = cpu => {
+        private static Cycle HighFromValAddY = cpu => {
             unchecked { cpu.addr |= (ushort) (cpu.Read((byte) (cpu.val + 1)) << 8); }
 
             // Save addr H for later
@@ -163,7 +163,7 @@ namespace NesSharp
             cpu.addr |= low;
         };
 
-        private static Cycle HighPCAddY = cpu => {
+        private static Cycle HighFromPCAddY = cpu => {
             cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
             unchecked { cpu.PC += 1; }
 
@@ -180,7 +180,7 @@ namespace NesSharp
             cpu.addr |= low;
         };
 
-        private static Cycle HighPCAddX = cpu => {
+        private static Cycle HighFromPCAddX = cpu => {
             cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
             unchecked { cpu.PC += 1; }
 
@@ -216,12 +216,12 @@ namespace NesSharp
 
         private static Cycle WriteVal = cpu => cpu.Write(cpu.addr, cpu.val);
 
-        private static Cycle LowPC = cpu => {
+        private static Cycle LowFromPC = cpu => {
             cpu.addr = cpu.Read(cpu.PC);
             unchecked { cpu.PC += 1; }
         };
 
-        private static Cycle HighPC = cpu => {
+        private static Cycle HighFromPC = cpu => {
             cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
             unchecked { cpu.PC += 1; }
         };
