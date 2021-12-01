@@ -14,14 +14,13 @@ namespace NesSharp
 /* IMM   */ new Cycle[] { FetchPC, FetchPC },
 /* REL   */ new Cycle[] { FetchPC, FetchPC },
 /* ZERO  */ new Cycle[] { FetchPC, LowPC },
-/* ZEROX */ new Cycle[] { Jam, Jam }, // TODO
-/* ZEROY */ new Cycle[] { Jam, Jam }, // TODO
-/* IND   */ new Cycle[] { Jam, Jam }, // TODO
+/* ZEROX */ new Cycle[] { FetchPC, LowPC, LowAddX },
+/* ZEROY */ new Cycle[] { FetchPC, LowPC, LowAddY },
 /* INDX  */ new Cycle[] { FetchPC, FetchPC, ValAddX, LowVal, HighVal },
-/* INDY  */ new Cycle[] { Jam, Jam }, // TODO
+/* INDY  */ new Cycle[] { FetchPC, FetchPC, LowVal, HighValAddY, FixAddr },
 /* ABS   */ new Cycle[] { FetchPC, LowPC, HighPC },
-/* ABSX  */ new Cycle[] { Jam, Jam }, // TODO
-/* ABSY  */ new Cycle[] { Jam, Jam }, // TODO
+/* ABSX  */ new Cycle[] { FetchPC, LowPC, HighPCAddX, FixAddr },
+/* ABSY  */ new Cycle[] { FetchPC, LowPC, HighPCAddY, FixAddr },
         };
 
         private static string[] addressingNames = {
@@ -33,7 +32,6 @@ namespace NesSharp
 /* ZERO  */ "zpg",
 /* ZEROX */ "zpg,X",
 /* ZEROY */ "zpg,Y",
-/* IND   */ "ind",
 /* INDX  */ "X,ind",
 /* INDY  */ "ind,Y",
 /* ABS   */ "abs",
@@ -72,7 +70,11 @@ namespace NesSharp
             byte i = 0;
             foreach (Instruction instr in instructions)
             {
-                if (!instr.Name.Contains('*')) i++;
+                if (!instr.Name.Contains('*'))
+                {
+                    i++;
+                    Console.WriteLine(instr.Name);
+                }
             }
             return i;
         }
@@ -89,7 +91,15 @@ namespace NesSharp
                 bool writesAddr = false;
                 string name = "";
 
-                switch (i & 0x1F)
+                if (i == 0x96 || i == 0xB6)
+                {
+                    mode = AddressingMode.ZEROY;
+                }
+                else if (i == 0xBE)
+                {
+                    mode = AddressingMode.ABSY;
+                }
+                else switch (i & 0x1F)
                 {
                     case 0x08:
                     case 0x10:
@@ -98,7 +108,7 @@ namespace NesSharp
                     case 0x1A:
                         continue;
                     case 0x02:
-                        if (i != 0xA2) continue;
+                        if (i != 0xA2) continue; // LDX #
                         mode = AddressingMode.IMM;
                         break;
                     case 0x00:
@@ -140,6 +150,9 @@ namespace NesSharp
                         mode = AddressingMode.ABSY;
                         break;
                     case 0x1C:
+                        if (i != 0xBC) continue; // LDY abs,X
+                        mode = AddressingMode.ABSX;
+                        break;
                     case 0x1D:
                     case 0x1E:
                     case 0x1F:
@@ -149,34 +162,34 @@ namespace NesSharp
 
                 switch (i & 0b11100011)
                 {
-                    case 0x01:                             cycle = ORA; name = "ORA"; readsAddr = true;                    break;
-                    case 0x02:                             cycle = ASL; name = "ASL"; readsAddr = true; writesAddr = true; break;
+                    case 0x01:                                          cycle = ORA; name = "ORA"; readsAddr = true;                    break;
+                    case 0x02:                                          cycle = ASL; name = "ASL"; readsAddr = true; writesAddr = true; break;
 
-                    case 0x20: if (i != 0x34 && i != 0x1C) cycle = BIT; name = "BIT"; readsAddr = true;                    break;
-                    case 0x21:                             cycle = AND; name = "AND"; readsAddr = true;                    break;
-                    case 0x22:                             cycle = ROL; name = "ROL"; readsAddr = true; writesAddr = true; break;
+                    case 0x20: if (i != 0x34 && i != 0x1C)              cycle = BIT; name = "BIT"; readsAddr = true;                    break;
+                    case 0x21:                                          cycle = AND; name = "AND"; readsAddr = true;                    break;
+                    case 0x22:                                          cycle = ROL; name = "ROL"; readsAddr = true; writesAddr = true; break;
 
-                    case 0x41:                             cycle = EOR; name = "EOR"; readsAddr = true;                    break;
-                    case 0x42:                             cycle = LSR; name = "LSR"; readsAddr = true; writesAddr = true; break;
+                    case 0x41:                                          cycle = EOR; name = "EOR"; readsAddr = true;                    break;
+                    case 0x42:                                          cycle = LSR; name = "LSR"; readsAddr = true; writesAddr = true; break;
 
-                    case 0x61:                             cycle = ADC; name = "ADC"; readsAddr = true;                    break;
-                    case 0x62:                             cycle = ROR; name = "ROR"; readsAddr = true; writesAddr = true; break;
+                    case 0x61:                                          cycle = ADC; name = "ADC"; readsAddr = true;                    break;
+                    case 0x62:                                          cycle = ROR; name = "ROR"; readsAddr = true; writesAddr = true; break;
 
-                    case 0x80: if (i != 0x80 && i != 0x9B) cycle = STY; name = "STY";                                      break;
-                    case 0x81: if (i != 0x89)              cycle = STA; name = "STA";                                      break;
-                    case 0x82: if (i != 0x8A && i != 0x9D) cycle = STX; name = "STX";                                      break;
+                    case 0x80: if (i != 0x80 && i != 0x9B)              cycle = STY; name = "STY";                                      break;
+                    case 0x81: if (i != 0x89)                           cycle = STA; name = "STA";                                      break;
+                    case 0x82: if (i != 0x8A && i != 0x9D && i != 0x9E) cycle = STX; name = "STX";                                      break;
 
-                    case 0xA0:                             cycle = LDY; name = "LDY"; readsAddr = true;                    break;
-                    case 0xA1:                             cycle = LDA; name = "LDA"; readsAddr = true;                    break;
-                    case 0xA2:                             cycle = LDX; name = "LDX"; readsAddr = true;                    break;
+                    case 0xA0:                                          cycle = LDY; name = "LDY"; readsAddr = true;                    break;
+                    case 0xA1:                                          cycle = LDA; name = "LDA"; readsAddr = true;                    break;
+                    case 0xA2:                                          cycle = LDX; name = "LDX"; readsAddr = true;                    break;
 
-                    case 0xC0: if (i != 0xD4 && i != 0xDC) cycle = CPY; name = "CPY"; readsAddr = true;                    break;
-                    case 0xC1:                             cycle = CMP; name = "CMP"; readsAddr = true;                    break;
-                    case 0xC2:                             cycle = DEC; name = "DEC"; readsAddr = true; writesAddr = true; break;
+                    case 0xC0: if (i != 0xD4 && i != 0xDC)              cycle = CPY; name = "CPY"; readsAddr = true;                    break;
+                    case 0xC1:                                          cycle = CMP; name = "CMP"; readsAddr = true;                    break;
+                    case 0xC2:                                          cycle = DEC; name = "DEC"; readsAddr = true; writesAddr = true; break;
 
-                    case 0xE0: if (i != 0xF4 && i != 0xFC) cycle = CPX; name = "CPX"; readsAddr = true;                    break;
-                    case 0xE1:                             cycle = SBC; name = "SBC"; readsAddr = true;                    break;
-                    case 0xE2:                             cycle = INC; name = "INC"; readsAddr = true; writesAddr = true; break;
+                    case 0xE0: if (i != 0xF4 && i != 0xFC)              cycle = CPX; name = "CPX"; readsAddr = true;                    break;
+                    case 0xE1:                                          cycle = SBC; name = "SBC"; readsAddr = true;                    break;
+                    case 0xE2:                                          cycle = INC; name = "INC"; readsAddr = true; writesAddr = true; break;
                 }
 
                 if (cycle == null)
@@ -238,7 +251,7 @@ namespace NesSharp
             instructions[0xBA] = new Instruction("TSX impl",  AddressingMode.IMP, false, new Cycle[] { TSX });
 
             instructions[0x4C] = new Instruction("JMP abs",   AddressingMode.IMM, false, new Cycle[] { JumpPC });
-            instructions[0x6C] = new Instruction("JMP ind",   AddressingMode.ABS, true,  new Cycle[] { JumpPC });
+            instructions[0x6C] = new Instruction("JMP ind",   AddressingMode.ABS, true,  new Cycle[] { JumpPCInd });
 
             instructions[0xEA] = new Instruction("NOP impl",  AddressingMode.IMP, false, new Cycle[] {});
         }

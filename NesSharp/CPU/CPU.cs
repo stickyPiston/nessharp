@@ -68,7 +68,7 @@ namespace NesSharp
             NONE,
             ACC, IMP, IMM, REL,
             ZERO, ZEROX, ZEROY,
-            IND, INDX, INDY,
+            INDX, INDY,
             ABS, ABSX, ABSY,
         }
 
@@ -77,10 +77,14 @@ namespace NesSharp
             public string Name;
             public AddressingMode Mode;
             public Cycle[] Cycles;
+            public bool ReadsAddr;
+            public bool WritesAddr;
 
             public Instruction(string name, AddressingMode mode, bool readsAddr, Cycle[] cycles, bool writesAddr = false) {
                 Name = name;
                 Mode = mode;
+                ReadsAddr = readsAddr;
+                WritesAddr = writesAddr;
 
                 Cycle[] modeCycles = addressingInstructions[(int) mode];
                 Cycles = new Cycle[modeCycles.Length + cycles.Length + (readsAddr ? 1 : 0) + (writesAddr ? 1 : 0)];
@@ -95,8 +99,9 @@ namespace NesSharp
         }
 
         private Instruction instr;
-        private byte cycle, val;
-        private ushort ptr, addr;
+        private byte cycle;
+        public byte val { get; private set; }
+        private ushort addr;
 
     #if DEBUG
         private bool _read;
@@ -217,11 +222,11 @@ namespace NesSharp
 
         public string DumpCycle() {
         #if DEBUG
-            return string.Format("{6} #{7} | {11} ${12:X4} = {13:X2} | ptr:{8:X4} addr:{9:X4} val:{10:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} SP:01{4:X2} PC:{5:X4}",
-                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, ptr, addr, val, _read ? "READ " : "WRITE", _addr, _data);
+            return string.Format("{6} #{7} | {10} ${11:X4} = {12:X2} | addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} SP:01{4:X2} PC:{5:X4}",
+                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, addr, val, _read ? "READ " : "WRITE", _addr, _data);
         #else
-            return string.Format("{6} #{7} | ptr:{8:X4} addr:{9:X4} val:{10:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
-                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, ptr, addr, val);
+            return string.Format("{6} #{7} | addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
+                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, addr, val);
         #endif
         }
     }

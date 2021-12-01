@@ -127,12 +127,91 @@ namespace NesSharp
             unchecked { cpu.val += cpu.X; }
         };
 
+        private static Cycle LowAddX = cpu => {
+            cpu.Read(cpu.addr);
+            unchecked { cpu.addr += cpu.X; }
+            cpu.addr &= 0x00FF;
+        };
+
+        private static Cycle LowAddY = cpu => {
+            cpu.Read(cpu.addr);
+            unchecked { cpu.addr += cpu.Y; }
+            cpu.addr &= 0x00FF;
+        };
+
         private static Cycle LowVal = cpu => {
             cpu.addr = cpu.Read(cpu.val);
         };
 
         private static Cycle HighVal = cpu => {
             unchecked { cpu.addr |= (ushort) (cpu.Read((byte) (cpu.val + 1)) << 8); }
+        };
+
+        private static Cycle HighValAddY = cpu => {
+            unchecked { cpu.addr |= (ushort) (cpu.Read((byte) (cpu.val + 1)) << 8); }
+
+            // Save addr H for later
+            unchecked {
+                ushort branch = (ushort) (cpu.addr + cpu.Y);
+                cpu.val = (byte) (branch >> 8);
+            }
+
+            // Set addr L
+            byte low = (byte) cpu.addr;
+            unchecked { low += cpu.Y; }
+            cpu.addr &= 0xFF00;
+            cpu.addr |= low;
+        };
+
+        private static Cycle HighPCAddY = cpu => {
+            cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
+            unchecked { cpu.PC += 1; }
+
+            // Save addr H for later
+            unchecked {
+                ushort branch = (ushort) (cpu.addr + cpu.Y);
+                cpu.val = (byte) (branch >> 8);
+            }
+
+            // Set addr L
+            byte low = (byte) cpu.addr;
+            unchecked { low += cpu.Y; }
+            cpu.addr &= 0xFF00;
+            cpu.addr |= low;
+        };
+
+        private static Cycle HighPCAddX = cpu => {
+            cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
+            unchecked { cpu.PC += 1; }
+
+            // Save addr H for later
+            unchecked {
+                ushort branch = (ushort) (cpu.addr + cpu.X);
+                cpu.val = (byte) (branch >> 8);
+            }
+
+            // Set addr L
+            byte low = (byte) cpu.addr;
+            unchecked { low += cpu.X; }
+            cpu.addr &= 0xFF00;
+            cpu.addr |= low;
+        };
+
+        private static Cycle FixAddr = cpu => {
+            byte high = cpu.val;
+            cpu.val = cpu.Read(cpu.addr);
+
+            if ((byte) (cpu.addr >> 8) != high)
+            {
+                // Page cross!
+                cpu.addr &= 0x00FF;
+                cpu.addr |= (ushort) (high << 8);
+            }
+            else if (cpu.instr.ReadsAddr && !cpu.instr.WritesAddr)
+            {
+                // No page cross!
+                cpu.cycle += 1; // Skip another read
+            }
         };
 
         private static Cycle WriteVal = cpu => cpu.Write(cpu.addr, cpu.val);
@@ -377,6 +456,17 @@ namespace NesSharp
         private static Cycle JumpPC = cpu => {
             // fetch high address
             cpu.PC = (ushort) (cpu.Read(cpu.PC) << 8);
+
+            // copy low address byte
+            cpu.PC |= cpu.val;
+        };
+
+        private static Cycle JumpPCInd = cpu => {
+            // fetch high address
+            byte addr = (byte) cpu.addr;
+            unchecked { addr += 1; }
+            ushort effective = (ushort) ((cpu.addr & 0xFF00) | addr);
+            cpu.PC = (ushort) (cpu.Read(effective) << 8);
 
             // copy low address byte
             cpu.PC |= cpu.val;
