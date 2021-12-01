@@ -51,7 +51,7 @@ namespace NesSharp
         private static Instruction NMIInstruction = new Instruction("NMI", AddressingMode.NONE, false, new Cycle[] {
             DummyReadAtPC,      // dummy read
             DummyReadAtPC,      // dummy read
-            PushPCH,            // push PC to stack 
+            PushPCH,            // push PC to stack
             PushPCL,
             PushP(false),       // push P to stack with B = false
             FetchPCLow(0xFFFA), // fetch PC, set I flag

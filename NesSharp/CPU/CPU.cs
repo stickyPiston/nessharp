@@ -91,7 +91,7 @@ namespace NesSharp
 
                 modeCycles.CopyTo(Cycles, 0);
                 if (readsAddr)
-                    Cycles[modeCycles.Length] = FetchAddr;
+                    Cycles[modeCycles.Length] = ValFromAddr;
                 cycles.CopyTo(Cycles, modeCycles.Length + (readsAddr ? 1 : 0));
                 if (writesAddr)
                     Cycles[modeCycles.Length + cycles.Length + (readsAddr ? 1 : 0)] = WriteVal;
@@ -201,7 +201,7 @@ namespace NesSharp
                 else
                 {
                     // Fetch next instruction, execute first cycle
-                    FetchPC(this);
+                    ValFromPC(this);
                     SetInstruction(instructions[val]);
                     
                     cycle = 1;
