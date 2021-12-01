@@ -40,28 +40,28 @@ namespace NesSharp
         };
 
         private static Instruction IRQInstruction = new Instruction("IRQ", AddressingMode.NONE, false, new Cycle[] {
-            DummyReadAtPC,      // dummy read
-            DummyReadAtPC,      // dummy read
-            PushPCH,            // push PC to stack 
+            DummyReadAtPC,         // dummy read
+            DummyReadAtPC,         // dummy read
+            PushPCH,               // push PC to stack 
             PushPCL,
-            PushP(false),       // push P to stack with B = false
-            FetchPCLow(0xFFFE), // fetch PC, set I flag
-            FetchPCHigh(0xFFFF),
+            PushP(false),          // push P to stack with B = false
+            PCLowFromAddr(0xFFFE), // fetch PC, set I flag
+            PCHighFromAddr(0xFFFF),
         });
         private static Instruction NMIInstruction = new Instruction("NMI", AddressingMode.NONE, false, new Cycle[] {
-            DummyReadAtPC,      // dummy read
-            DummyReadAtPC,      // dummy read
-            PushPCH,            // push PC to stack
+            DummyReadAtPC,         // dummy read
+            DummyReadAtPC,         // dummy read
+            PushPCH,               // push PC to stack
             PushPCL,
-            PushP(false),       // push P to stack with B = false
-            FetchPCLow(0xFFFA), // fetch PC, set I flag
-            FetchPCHigh(0xFFFB),
+            PushP(false),          // push P to stack with B = false
+            PCLowFromAddr(0xFFFA), // fetch PC, set I flag
+            PCHighFromAddr(0xFFFB),
         });
         private static Instruction RESETInstruction = new Instruction("RESET", AddressingMode.NONE, false, new Cycle[] {
             DummyReadAtPC,  DummyReadAtPC,  DummyReadAtPC,  // dummy reads (I'm not sure why there are 3)
             DummyPushStack, DummyPushStack, DummyPushStack, // decrement stack 3 times
-            FetchPCLow(0xFFFC),                             // fetch PC, set I flag
-            FetchPCHigh(0xFFFD),
+            PCLowFromAddr(0xFFFC),                          // fetch PC, set I flag
+            PCHighFromAddr(0xFFFD),
         });
 
         private static Instruction[] instructions = new Instruction[256];
@@ -165,7 +165,7 @@ namespace NesSharp
                     case 0x01:                                          cycle = ORA; name = "ORA"; readsAddr = true;                    break;
                     case 0x02:                                          cycle = ASL; name = "ASL"; readsAddr = true; writesAddr = true; break;
 
-                    case 0x20: if (i != 0x34 && i != 0x1C)              cycle = BIT; name = "BIT"; readsAddr = true;                    break;
+                    case 0x20: if (i != 0x34)                           cycle = BIT; name = "BIT"; readsAddr = true;                    break;
                     case 0x21:                                          cycle = AND; name = "AND"; readsAddr = true;                    break;
                     case 0x22:                                          cycle = ROL; name = "ROL"; readsAddr = true; writesAddr = true; break;
 
@@ -183,11 +183,11 @@ namespace NesSharp
                     case 0xA1:                                          cycle = LDA; name = "LDA"; readsAddr = true;                    break;
                     case 0xA2:                                          cycle = LDX; name = "LDX"; readsAddr = true;                    break;
 
-                    case 0xC0: if (i != 0xD4 && i != 0xDC)              cycle = CPY; name = "CPY"; readsAddr = true;                    break;
+                    case 0xC0: if (i != 0xD4)                           cycle = CPY; name = "CPY"; readsAddr = true;                    break;
                     case 0xC1:                                          cycle = CMP; name = "CMP"; readsAddr = true;                    break;
                     case 0xC2:                                          cycle = DEC; name = "DEC"; readsAddr = true; writesAddr = true; break;
 
-                    case 0xE0: if (i != 0xF4 && i != 0xFC)              cycle = CPX; name = "CPX"; readsAddr = true;                    break;
+                    case 0xE0: if (i != 0xF4)                           cycle = CPX; name = "CPX"; readsAddr = true;                    break;
                     case 0xE1:                                          cycle = SBC; name = "SBC"; readsAddr = true;                    break;
                     case 0xE2:                                          cycle = INC; name = "INC"; readsAddr = true; writesAddr = true; break;
                 }
@@ -211,7 +211,7 @@ namespace NesSharp
             }
 
             // Rest of the instructions
-            instructions[0x00] = new Instruction("BRK impl",  AddressingMode.IMP, false, new Cycle[] { PushPCH, PushPCL, PushP(true), FetchPCLow(0xFFFE), FetchPCHigh(0xFFFF) });
+            instructions[0x00] = new Instruction("BRK impl",  AddressingMode.IMP, false, new Cycle[] { PushPCH, PushPCL, PushP(true), PCLowFromAddr(0xFFFE), PCHighFromAddr(0xFFFF) });
             instructions[0x20] = new Instruction("JSR abs",   AddressingMode.IMM, false, new Cycle[] { DummyReadAtSP, PushPCH, PushPCL, JumpPC });
             instructions[0x40] = new Instruction("RTI impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullP(true), PullPCL, PullPCH });
             instructions[0x60] = new Instruction("RTS impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullPCL, PullPCH, ValFromPC });

@@ -8,6 +8,10 @@ namespace NesSharp
     public partial class CPU
     {
         // Micro-micro-instructions
+
+        /// <summary>Checks if an interrupt is pending.
+        /// If so, it switches execution to said interrupt without changing the cycle number and returns true.
+        /// Otherwise it does nothing and returns false.</summary>
         private bool CheckPending(bool irq = true)
         {
             if (pending != null && (irq || pending == HardwareInterrupt.NMI))
@@ -19,6 +23,9 @@ namespace NesSharp
             return false;
         }
 
+        /// <summary>Checks if an interrupt is pending.
+        /// If so, it switches execution to said interrupt at cycle 0.
+        /// Otherwise it switches to the specified instruction at cycle 1.</summary>
         private void SetInstructionCheckPending(Instruction instr)
         {
             if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle
@@ -29,6 +36,9 @@ namespace NesSharp
             }
         }
 
+        /// <summary>Checks if an interrupt is pending.
+        /// If so, it switches execution to said interrupt at cycle 0.
+        /// Otherwise it reads the PC and switches to the next instruction at cycle 1.</summary>
         private void NextInstruction()
         {
             if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle
@@ -42,6 +52,7 @@ namespace NesSharp
             }
         }
 
+        /// <summary>Reads a value from the bus at the specified adress.</summary>
         private byte Read(ushort addr)
         {
         #if DEBUG
@@ -54,6 +65,7 @@ namespace NesSharp
         #endif
         }
 
+        /// <summary>Writes a value to the bus at the specified adress.</summary>
         private void Write(ushort addr, byte b)
         {
         #if DEBUG
@@ -64,12 +76,14 @@ namespace NesSharp
             this.bus.Write(addr, b);
         }
 
+        /// <summary>Sets the N and Z flags based on a value.</summary>
         private void SetFlags(byte b)
         {
             this.P.N = (byte) (b >> 7);
             this.P.Z = Flags.Zero(b);
         }
 
+        /// <summary>Adds two numbers a and b, and a flag c, returning the value. The V and C flags are set based on the performed operation.</summary>
         private byte Add(byte a, byte b, byte c)
         {
             ushort res = (ushort) ((ushort) a + b + c);
@@ -78,6 +92,7 @@ namespace NesSharp
             return (byte) res;
         }
 
+        /// <summary>Branches to a new spot if the bool b is true. Otherwise it fetches the next instruction.</summary>
         private void Branch(bool b)
         {
             byte operand = this.val;
@@ -105,48 +120,84 @@ namespace NesSharp
         }
 
         // Micro-instructions
+
+        /// <summary>Fixes the high byte of the PC after a branch, as it can sometimes be off by 0x0100.</summary>
+        private static Cycle FixPC = cpu => {
+            byte PCH = cpu.val;
+            byte next = cpu.Read(cpu.PC);
+
+            if ((byte) (cpu.PC >> 8) != PCH) {
+                // Different page
+                cpu.PC &= 0x00FF;
+                cpu.PC |= (ushort) (PCH << 8);
+            } else {
+                // Next instruction
+                unchecked { cpu.PC += 1; }
+
+                // "a taken non-page-crossing branch ignores IRQ/NMI during its last clock, so that next instruction executes before the IRQ"
+                if (cpu.pending != null && cpu.previous == null) {
+                    cpu.SetInstruction(instructions[next]);
+                } else {
+                    cpu.SetInstructionCheckPending(instructions[next]);
+                }
+            }
+
+        };
+
+        /// <summary>Reads at the PC and throws the value away.</summary>
         private static Cycle DummyReadAtPC = cpu => cpu.Read(cpu.PC);
+
+        /// <summary>Reads at the SP and throws the value away.</summary>
         private static Cycle DummyReadAtSP = cpu => cpu.Read((ushort) (0x100 | cpu.S));
 
+        /// <summary>Fetches the value from the PC.</summary>
         private static Cycle ValFromPC = cpu => {
             cpu.val = cpu.Read(cpu.PC);
             unchecked { cpu.PC += 1; }
         };
 
+        /// <summary>Fetches the value from the address.</summary>
         private static Cycle ValFromAddr = cpu => {
             cpu.val = cpu.Read(cpu.addr);
         };
 
+        /// <summary>Reads at the PC, throws the value away and sets the value to the A register.</summary>
         private static Cycle ValFromAcc = cpu => {
             cpu.Read(cpu.PC);
             cpu.val = cpu.A;
         };
 
+        /// <summary>Reads at the value pointer, throws the value away and adds X to the value.</summary>
         private static Cycle ValAddX = cpu => {
             cpu.Read(cpu.val);
             unchecked { cpu.val += cpu.X; }
         };
 
+        /// <summary>Reads at the address, throws the value away and adds X to the low byte of the address.</summary>
         private static Cycle LowAddX = cpu => {
             cpu.Read(cpu.addr);
             unchecked { cpu.addr += cpu.X; }
             cpu.addr &= 0x00FF;
         };
 
+        /// <summary>Reads at the address, throws the value away and adds Y to the low byte of the address.</summary>
         private static Cycle LowAddY = cpu => {
             cpu.Read(cpu.addr);
             unchecked { cpu.addr += cpu.Y; }
             cpu.addr &= 0x00FF;
         };
 
+        /// <summary>Fetches the low address from the value pointer.</summary>
         private static Cycle LowFromVal = cpu => {
             cpu.addr = cpu.Read(cpu.val);
         };
 
+        /// <summary>Fetches the high address from the value pointer.</summary>
         private static Cycle HighFromVal = cpu => {
             unchecked { cpu.addr |= (ushort) (cpu.Read((byte) (cpu.val + 1)) << 8); }
         };
 
+        /// <summary>Fetches the high address from value pointer, and adds Y to the low byte (which later will have to be fixed).</summary>
         private static Cycle HighFromValAddY = cpu => {
             unchecked { cpu.addr |= (ushort) (cpu.Read((byte) (cpu.val + 1)) << 8); }
 
@@ -163,6 +214,7 @@ namespace NesSharp
             cpu.addr |= low;
         };
 
+        /// <summary>Fetches the high address from the PC, and adds Y to the low byte (which later will have to be fixed).</summary>
         private static Cycle HighFromPCAddY = cpu => {
             cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
             unchecked { cpu.PC += 1; }
@@ -180,6 +232,7 @@ namespace NesSharp
             cpu.addr |= low;
         };
 
+        /// <summary>Fetches the high address from the PC, and adds X to the low byte (which later will have to be fixed).</summary>
         private static Cycle HighFromPCAddX = cpu => {
             cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
             unchecked { cpu.PC += 1; }
@@ -197,6 +250,7 @@ namespace NesSharp
             cpu.addr |= low;
         };
 
+        /// <summary>Fixes the high byte of the address after an indexed read, as it can sometimes be off by 0x0100.</summary>
         private static Cycle FixAddr = cpu => {
             byte high = cpu.val;
             cpu.val = cpu.Read(cpu.addr);
@@ -214,49 +268,59 @@ namespace NesSharp
             }
         };
 
+        /// <summary>Writes the value to the adress.</summary>
         private static Cycle WriteVal = cpu => cpu.Write(cpu.addr, cpu.val);
 
+        /// <summary>Fetches the low address from the PC.</summary>
         private static Cycle LowFromPC = cpu => {
             cpu.addr = cpu.Read(cpu.PC);
             unchecked { cpu.PC += 1; }
         };
 
+        /// <summary>Fetches the high address from the PC.</summary>
         private static Cycle HighFromPC = cpu => {
             cpu.addr |= (ushort) (cpu.Read(cpu.PC) << 8);
             unchecked { cpu.PC += 1; }
         };
 
+        /// <summary>Reads the stack and decrements the stack pointer.</summary>
         private static Cycle DummyPushStack = cpu => {
             cpu.Read((ushort) (0x100 | cpu.S));
             unchecked { cpu.S -= 1; }
         };
 
+        /// <summary>Pushes the high byte of the PC to the stack.</summary>
         private static Cycle PushPCH = cpu => {
             cpu.Write((ushort) (0x100 | cpu.S), (byte) (cpu.PC >> 8));
             unchecked { cpu.S -= 1; }
         };
 
+        /// <summary>Pushes the low byte of the PC to the stack.</summary>
         private static Cycle PushPCL = cpu => {
             cpu.Write((ushort) (0x100 | cpu.S), (byte) cpu.PC);
             unchecked { cpu.S -= 1; }
         };
 
+        /// <summary>Pushes the A register to the stack.</summary>
         private static Cycle PushA = cpu => {
             cpu.Write((ushort) (0x100 | cpu.S), cpu.A);
             unchecked { cpu.S -= 1; }
         };
 
+        /// <summary>Increments the stack pointer.</summary>
         private static Cycle IncSP = cpu => {
             cpu.Read((ushort) (0x100 | cpu.S));
             unchecked { cpu.S += 1; }
         };
 
+        /// <summary>Pulls the low byte of the PC from the stack.</summary>
         private static Cycle PullPCL = cpu => {
             cpu.PC &= 0xFF00;
             cpu.PC |= cpu.Read((ushort) (0x100 | cpu.S));
             unchecked { cpu.S += 1; }
         };
 
+        /// <summary>Pulls the high byte of the PC from the stack.</summary>
         private static Cycle PullPCH = cpu => {
             cpu.PC &= 0x00FF;
             cpu.PC |= (ushort) (cpu.Read((ushort) (0x100 | cpu.S)) << 8);
@@ -267,7 +331,9 @@ namespace NesSharp
             cpu.SetFlags(cpu.A);
         };
 
-        private static Cycle PullP(bool inc) {
+        /// <summary>Pulls the P register from the stack.</summary>
+        private static Cycle PullP(bool inc)
+        {
             if (inc)
             {
                 return cpu => {
@@ -282,6 +348,55 @@ namespace NesSharp
                 };
             }
         }
+
+        /// <summary>Pushes P register to the stack.</summary>
+        private static Cycle PushP(bool B)
+        {
+            if (B) return cpu => {
+                // Interrupt hijack (all hardware interrupts)
+                cpu.CheckPending(true);
+
+                cpu.P.B = 1; // Set B flag
+
+                cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
+                unchecked { cpu.S -= 1; }
+            };
+            else return cpu => {
+                // Interrupt hijack (only NMI)
+                cpu.CheckPending(false);
+
+                if (cpu.pending == HardwareInterrupt.NMI) {
+                    // Reset NMI on handle
+                    cpu.pending = null;
+                }
+
+                cpu.P.B = 0; // Unset B flag
+
+                cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
+                unchecked { cpu.S -= 1; }
+            };
+        }
+
+        /// <summary>Fetches the low byte of the PC from a static address.</summary>
+        private static Cycle PCLowFromAddr(ushort addr)
+        {
+            return cpu => {
+                cpu.PC &= 0xFF00;
+                cpu.PC |= cpu.Read(addr);
+                cpu.P.I = 1; // Set I flag
+            };
+        }
+
+        /// <summary>Fetches the high byte of the PC from a static address.</summary>
+        private static Cycle PCHighFromAddr(ushort addr)
+        {
+            return cpu => {
+                cpu.PC &= 0x00FF;
+                cpu.PC |= (ushort) (cpu.Read(addr) << 8);
+            };
+        }
+
+        // Cycles for specific instructions
 
         private static Cycle AND = cpu => {
             cpu.A &= cpu.val;
@@ -556,72 +671,6 @@ namespace NesSharp
         private static Cycle BVC = cpu => cpu.Branch(cpu.P.V == 0);
         private static Cycle BMI = cpu => cpu.Branch(cpu.P.N == 1);
         private static Cycle BPL = cpu => cpu.Branch(cpu.P.N == 0);
-
-        private static Cycle FixPC = cpu => {
-            byte PCH = cpu.val;
-            byte next = cpu.Read(cpu.PC);
-
-            if ((byte) (cpu.PC >> 8) != PCH) {
-                // Different page
-                cpu.PC &= 0x00FF;
-                cpu.PC |= (ushort) (PCH << 8);
-            } else {
-                // Next instruction
-                unchecked { cpu.PC += 1; }
-
-                // "a taken non-page-crossing branch ignores IRQ/NMI during its last clock, so that next instruction executes before the IRQ"
-                if (cpu.pending != null && cpu.previous == null) {
-                    cpu.SetInstruction(instructions[next]);
-                } else {
-                    cpu.SetInstructionCheckPending(instructions[next]);
-                }
-            }
-
-        };
-
-        private static Cycle PushP(bool B)
-        {
-            if (B) return cpu => {
-                // Interrupt hijack (all hardware interrupts)
-                cpu.CheckPending(true);
-
-                cpu.P.B = 1; // Set B flag
-
-                cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
-                unchecked { cpu.S -= 1; }
-            };
-            else return cpu => {
-                // Interrupt hijack (only NMI)
-                cpu.CheckPending(false);
-
-                if (cpu.pending == HardwareInterrupt.NMI) {
-                    // Reset NMI on handle
-                    cpu.pending = null;
-                }
-
-                cpu.P.B = 0; // Unset B flag
-
-                cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
-                unchecked { cpu.S -= 1; }
-            };
-        }
-
-        private static Cycle FetchPCLow(ushort addr)
-        {
-            return cpu => {
-                cpu.PC &= 0xFF00;
-                cpu.PC |= cpu.Read(addr);
-                cpu.P.I = 1; // Set I flag
-            };
-        }
-
-        private static Cycle FetchPCHigh(ushort addr)
-        {
-            return cpu => {
-                cpu.PC &= 0x00FF;
-                cpu.PC |= (ushort) (cpu.Read(addr) << 8);
-            };
-        }
 
         public class OpcodeException : Exception {
             public OpcodeException(string msg) : base(msg) {}
