@@ -70,11 +70,7 @@ namespace NesSharp
             byte i = 0;
             foreach (Instruction instr in instructions)
             {
-                if (!instr.Name.Contains('*'))
-                {
-                    i++;
-                    Console.WriteLine(instr.Name);
-                }
+                if (!instr.Name.Contains('*')) i++;
             }
             return i;
         }
@@ -106,6 +102,7 @@ namespace NesSharp
                     case 0x12:
                     case 0x18:
                     case 0x1A:
+                        // Rows that jam or are illegal
                         continue;
                     case 0x02:
                         if (i != 0xA2) continue; // LDX #
