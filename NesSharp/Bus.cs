@@ -4,10 +4,10 @@ using System;
 
 namespace NesSharp {
     public struct Range {
-        public uint start;
-        public uint end;
+        public ushort start;
+        public ushort end;
 
-        public Range(uint start, uint end) {
+        public Range(ushort start, ushort end) {
             this.start = start;
             this.end = end;
         }
@@ -47,9 +47,9 @@ namespace NesSharp {
                 if(addr >= range.Key.start && addr <= range.Key.end)
                 {
                     range.Value.Write(addr, data);
+                    return;
                 }
            }
-           
         }
     };
 }
