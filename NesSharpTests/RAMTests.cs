@@ -4,7 +4,7 @@ namespace NesSharpTests
 {
     public class RAMTests
     {
-        public NesSharp.RAM TRAM = new NesSharp.RAM();
+        public NesSharp.RAM TRAM = new NesSharp.RAM(2048);
 
         [Test]
         public void RWTest()
