@@ -1,4 +1,5 @@
-using NUint.Framework;
+using NUnit.Framework;
+using NesSharp;
 
 namespace NesSharpTests {
   class EmulatedKeyboard : InputDevice {
