@@ -1,8 +1,13 @@
 ﻿namespace NesSharp
 {
-	public class RAM : IAddressable
-	{
-        private byte[] Data = new byte [2048];
+    public class RAM : IAddressable
+    {
+        private byte[] Data;
+
+        public RAM (ushort Capacity)
+        {
+            Data = new byte[Capacity];
+        }
 
         public byte Read(ushort addr)
         {
