@@ -576,7 +576,7 @@ namespace NesSharp
             cpu.PC |= cpu.val;
         };
 
-        private static Cycle JumpPCInd = cpu => {
+        private static Cycle JumpAddr = cpu => {
             // fetch high address
             byte addr = (byte) cpu.addr;
             unchecked { addr += 1; }

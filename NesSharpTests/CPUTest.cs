@@ -78,7 +78,7 @@ namespace NesSharpTests
         public void Instructions()
         {
             // Write rom
-            byte[] bytes = File.ReadAllBytes("../../../roms/nestest.nes");
+            byte[] bytes = File.ReadAllBytes("../../../roms/nestest/nestest.nes");
             for (int i = 0; i + 0xC000 < 65536 && i + 16 < bytes.Length; i++)
             {
                 bus.Write((ushort) (i + 0x8000), bytes[i + 16]);
@@ -101,6 +101,93 @@ namespace NesSharpTests
             }
 
             Assert.AreEqual(0x04, cpu.val); // The next should be an illegal opcode
+        }
+
+        [Test]
+        public void IRQ()
+        {
+            // RESET vector
+            bus.Write(0xFFFC, 0x00); 
+            bus.Write(0xFFFD, 0xC0);
+
+            bus.Write(0xC000, 0x78); // SEI
+            bus.Write(0xC001, 0x58); // CLI
+            bus.Write(0xC002, 0xEA); // NOP 1
+            bus.Write(0xC003, 0xEA); // NOP 2
+            bus.Write(0xC004, 0xEA); // NOP 3
+            bus.Write(0xC005, 0x78); // SEI
+            bus.Write(0xC006, 0xEA); // NOP 4
+            bus.Write(0xC007, 0xEA); // NOP 5
+
+            // IRQ vector
+            bus.Write(0xFFFE, 0x00);
+            bus.Write(0xFFFF, 0x80);
+
+            bus.Write(0x8000, 0x40); // RTI
+
+            // Run
+            cpu.CycleInstruction(); // RESET
+            Assert.AreEqual(0xC000, cpu.PC);
+
+            cpu.Cycle(); // SEI
+            cpu.Cycle(); // SEI
+            cpu.Cycle(); // CLI
+
+            cpu.AssertIRQ(); // Assert on same cycle as CLI (should not interrupt)
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.Cycle(); // CLI
+            Assert.AreEqual(null, cpu.pending);
+            cpu.Cycle(); // NOP 1
+            Assert.AreEqual("NOP impl", cpu.instr.Name);
+            cpu.Cycle(); // NOP 1
+
+            cpu.AssertIRQ(); // Assert on incorrect cycle
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.Cycle(); // NOP 2
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
+            cpu.Cycle(); // NOP 2
+            Assert.AreEqual(null, cpu.pending);
+            cpu.Cycle(); // NOP 3
+            Assert.AreEqual("NOP impl", cpu.instr.Name);
+
+            cpu.AssertIRQ(); // Assert on correct cycle
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.Cycle(); // NOP 3
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
+            cpu.Cycle(); // IRQ
+            Assert.AreEqual("IRQ", cpu.instr.Name);
+
+            cpu.CycleInstruction(); // Finish IRQ
+            Assert.AreEqual(0x8000, cpu.PC);
+
+            cpu.CycleInstruction(); // RTI
+            Assert.AreEqual(0xC005, cpu.PC);
+
+            cpu.Cycle(); // SEI
+
+            cpu.AssertIRQ(); // Assert with interrupt flag set on same cycle (should still interrupt)
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.Cycle(); // SEI
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
+            cpu.Cycle(); // IRQ
+            Assert.AreEqual("IRQ", cpu.instr.Name);
+
+            cpu.CycleInstruction(); // Finish IRQ
+            Assert.AreEqual(0x8000, cpu.PC);
+
+            cpu.CycleInstruction(); // RTI
+            Assert.AreEqual(0xC006, cpu.PC);
+
+            cpu.Cycle(); // NOP 4
+
+            cpu.AssertIRQ(); // Assert on correct cycle with flag set
+            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.Cycle(); // NOP 4
+            Assert.AreEqual(null, cpu.pending);
+            cpu.Cycle(); // NOP 5
+            Assert.AreEqual("NOP impl", cpu.instr.Name);
+
+            cpu.Cycle(); // NOP 5
         }
 
         [Test]

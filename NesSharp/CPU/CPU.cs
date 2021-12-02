@@ -63,7 +63,7 @@ namespace NesSharp
         public Flags P;
 
         // Micro-instruction data
-        enum AddressingMode
+        public enum AddressingMode
         {
             NONE,
             ACC, IMP, IMM, REL,
@@ -72,7 +72,7 @@ namespace NesSharp
             ABS, ABSX, ABSY,
         }
 
-        struct Instruction
+        public struct Instruction
         {
             public string Name;
             public AddressingMode Mode;
@@ -98,10 +98,10 @@ namespace NesSharp
             }
         }
 
-        private Instruction instr;
-        private byte cycle;
+        public Instruction instr { get; private set; }
+        public byte cycle { get; private set; }
         public byte val { get; private set; }
-        private ushort addr;
+        public ushort addr { get; private set; }
 
     #if DEBUG
         private bool _read;
@@ -110,14 +110,14 @@ namespace NesSharp
     #endif
 
         // Interrupts
-        enum HardwareInterrupt
+        public enum HardwareInterrupt
         {
             NMI, IRQ
         }
 
-        private HardwareInterrupt? incoming; // next cycle
-        private HardwareInterrupt? pending;  // this cycle
-        private HardwareInterrupt? previous; // previous cycle
+        public HardwareInterrupt? incoming { get; private set; } // next cycle
+        public HardwareInterrupt? pending  { get; private set; } // this cycle
+        public HardwareInterrupt? previous { get; private set; } // previous cycle
 
         public CPU(IAddressable bus)
         {
@@ -145,7 +145,7 @@ namespace NesSharp
         {
             // An incoming NMI interrupt has priority
             // Ignore if interrupt disable flag is 1
-            if (incoming != HardwareInterrupt.NMI && P.I == 0)
+            if (incoming != HardwareInterrupt.NMI)
             {
                 incoming = HardwareInterrupt.IRQ;
             }
@@ -159,9 +159,13 @@ namespace NesSharp
         private void CycleEnd() {
             previous = pending;
 
-            // An incoming NMI interrupt has priority
+            // An pending NMI interrupt has priority
             // Reset IRQ signal (should only be high for 1 cycle)
-            if (pending == HardwareInterrupt.IRQ) pending = incoming;
+            if (pending != HardwareInterrupt.NMI)
+            {
+                if (incoming == HardwareInterrupt.IRQ && P.I == 1) pending = null;
+                else pending = incoming;
+            }
 
             incoming = null;
         }

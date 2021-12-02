@@ -248,7 +248,7 @@ namespace NesSharp
             instructions[0xBA] = new Instruction("TSX impl",  AddressingMode.IMP, false, new Cycle[] { TSX });
 
             instructions[0x4C] = new Instruction("JMP abs",   AddressingMode.IMM, false, new Cycle[] { JumpPC });
-            instructions[0x6C] = new Instruction("JMP ind",   AddressingMode.ABS, true,  new Cycle[] { JumpPCInd });
+            instructions[0x6C] = new Instruction("JMP ind",   AddressingMode.ABS, true,  new Cycle[] { JumpAddr });
 
             instructions[0xEA] = new Instruction("NOP impl",  AddressingMode.IMP, false, new Cycle[] {});
         }
