@@ -10,10 +10,10 @@ namespace NesSharpTests {
             bus.Write(0x120, 0x10);   
         }
 
-        public byte Read(short addr) {
-            return (addr == 0x12) ? 0x20 : 0x00;
+        public byte Read(ushort addr) {
+            return (addr == 0x12) ? (byte)0x20 : (byte)0x00;
         }
-        public void Write(short _, byte __) { }
+        public void Write(ushort _, byte __) { }
     }
 
     class ChipB : IAddressable {
@@ -21,15 +21,15 @@ namespace NesSharpTests {
         public ChipB(Bus bus) { this.bus = bus; }
 
         public byte  data = 0;
-        public short addr = 0;
-        public void Write(short addr, byte data) {
+        public ushort addr = 0;
+        public void Write(ushort addr, byte data) {
             this.data = data;
             this.addr = addr;
         }
 
         public byte exec() { return bus.Read(0x12); }
 
-        public byte Read(short _) { }
+        public byte Read(ushort _) { return 0; }
     }
 
     public class Tests {
@@ -40,14 +40,14 @@ namespace NesSharpTests {
         public void Setup() {
             var bus = new Bus();
             a = new ChipA(bus); b = new ChipB(bus);
-            bus.Register(a, new Range(0, 0x100));
-            bus.Register(b, new Range(0x101, 0x200));
+            bus.Register(a, new Range[]{new Range(0, 0x100)});
+            bus.Register(b, new Range[]{new Range(0x101, 0x200)});
         }
 
         [Test]
         public void Test1() {
             a.exec();
-            Assert.AreEqual(b.sata, 0x10);
+            Assert.AreEqual(b.data, 0x10);
             Assert.AreEqual(b.addr, 0x120);
         }
 
