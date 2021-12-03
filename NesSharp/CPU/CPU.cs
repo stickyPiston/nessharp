@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace NesSharp
 {
@@ -115,7 +116,9 @@ namespace NesSharp
             NMI, IRQ
         }
 
-        public HardwareInterrupt? incoming { get; private set; } // next cycle
+        private ISet<object> incomingIRQ = new HashSet<object>();
+        private bool incomingNMI;
+
         public HardwareInterrupt? pending  { get; private set; } // this cycle
         public HardwareInterrupt? previous { get; private set; } // previous cycle
 
@@ -138,17 +141,17 @@ namespace NesSharp
 
         public void AssertNMI()
         {
-            incoming = HardwareInterrupt.NMI;
+            incomingNMI = true;
         }
 
-        public void AssertIRQ()
+        public void HighIRQ(object sender)
         {
-            // An incoming NMI interrupt has priority
-            // Ignore if interrupt disable flag is 1
-            if (incoming != HardwareInterrupt.NMI)
-            {
-                incoming = HardwareInterrupt.IRQ;
-            }
+            incomingIRQ.Add(sender);
+        }
+
+        public void LowIRQ(object sender)
+        {
+            incomingIRQ.Remove(sender);
         }
 
         private void SetInstruction(Instruction instr)
@@ -160,14 +163,20 @@ namespace NesSharp
             previous = pending;
 
             // An pending NMI interrupt has priority
-            // Reset IRQ signal (should only be high for 1 cycle)
-            if (pending != HardwareInterrupt.NMI)
+            if (incomingNMI)
             {
-                if (incoming == HardwareInterrupt.IRQ && P.I == 1) pending = null;
-                else pending = incoming;
+                pending = HardwareInterrupt.NMI;
+                incomingNMI = false;
             }
-
-            incoming = null;
+            else if (incomingIRQ.Count > 0 && P.I == 0)
+            {
+                pending = HardwareInterrupt.IRQ;
+            }
+            // NMI stays pending until it is handled
+            else if (pending != HardwareInterrupt.NMI)
+            {
+                pending = null;
+            }
         }
 
         public void Cycle(int amount) {

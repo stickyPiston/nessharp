@@ -133,26 +133,26 @@ namespace NesSharpTests
             cpu.Cycle(); // SEI
             cpu.Cycle(); // CLI
 
-            cpu.AssertIRQ(); // Assert on same cycle as CLI (should not interrupt)
-            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.HighIRQ(this); // Assert on same cycle as CLI (should not interrupt)
             cpu.Cycle(); // CLI
+            cpu.LowIRQ(this);
             Assert.AreEqual(null, cpu.pending);
             cpu.Cycle(); // NOP 1
             Assert.AreEqual("NOP impl", cpu.instr.Name);
             cpu.Cycle(); // NOP 1
 
-            cpu.AssertIRQ(); // Assert on incorrect cycle
-            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.HighIRQ(this); // Assert on incorrect cycle
             cpu.Cycle(); // NOP 2
+            cpu.LowIRQ(this);
             Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
             cpu.Cycle(); // NOP 2
             Assert.AreEqual(null, cpu.pending);
             cpu.Cycle(); // NOP 3
             Assert.AreEqual("NOP impl", cpu.instr.Name);
 
-            cpu.AssertIRQ(); // Assert on correct cycle
-            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.HighIRQ(this); // Assert on correct cycle
             cpu.Cycle(); // NOP 3
+            cpu.LowIRQ(this);
             Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
             cpu.Cycle(); // IRQ
             Assert.AreEqual("IRQ", cpu.instr.Name);
@@ -165,9 +165,9 @@ namespace NesSharpTests
 
             cpu.Cycle(); // SEI
 
-            cpu.AssertIRQ(); // Assert with interrupt flag set on same cycle (should still interrupt)
-            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.HighIRQ(this); // Assert with interrupt flag set on same cycle (should still interrupt)
             cpu.Cycle(); // SEI
+            cpu.LowIRQ(this);
             Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
             cpu.Cycle(); // IRQ
             Assert.AreEqual("IRQ", cpu.instr.Name);
@@ -180,9 +180,9 @@ namespace NesSharpTests
 
             cpu.Cycle(); // NOP 4
 
-            cpu.AssertIRQ(); // Assert on correct cycle with flag set
-            Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.incoming);
+            cpu.HighIRQ(this); // Assert on correct cycle with flag set
             cpu.Cycle(); // NOP 4
+            cpu.LowIRQ(this);
             Assert.AreEqual(null, cpu.pending);
             cpu.Cycle(); // NOP 5
             Assert.AreEqual("NOP impl", cpu.instr.Name);
