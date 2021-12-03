@@ -220,7 +220,8 @@ namespace NesSharpTests
             cpu.Cycle(); // SEI
             cpu.Cycle(); // CLI
 
-            cpu.HighIRQ(this); // Assert on same cycle as CLI (should not interrupt)
+            // Assert on same cycle as CLI (should not interrupt)
+            cpu.HighIRQ(this);
             cpu.Cycle(); // CLI
             cpu.LowIRQ(this);
             Assert.AreEqual(null, cpu.pending);
@@ -228,52 +229,49 @@ namespace NesSharpTests
             Assert.AreEqual("NOP impl", cpu.instr.Name);
             cpu.Cycle(); // NOP 1
 
-            cpu.HighIRQ(this); // Assert on incorrect cycle
+            // Assert on incorrect cycle
+            cpu.HighIRQ(this);
             cpu.Cycle(); // NOP 2
             cpu.LowIRQ(this);
             Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
             cpu.Cycle(); // NOP 2
             Assert.AreEqual(null, cpu.pending);
+
+            // Assert on correct cycle
             cpu.Cycle(); // NOP 3
             Assert.AreEqual("NOP impl", cpu.instr.Name);
-
-            cpu.HighIRQ(this); // Assert on correct cycle
+            cpu.HighIRQ(this);
             cpu.Cycle(); // NOP 3
             cpu.LowIRQ(this);
             Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
             cpu.Cycle(); // IRQ
             Assert.AreEqual("IRQ", cpu.instr.Name);
-
             cpu.CycleInstruction(); // Finish IRQ
             Assert.AreEqual(0x8000, cpu.PC);
-
             cpu.CycleInstruction(); // RTI
             Assert.AreEqual(0xC005, cpu.PC);
 
+            // Assert with interrupt flag set on same cycle (should still interrupt)
             cpu.Cycle(); // SEI
-
-            cpu.HighIRQ(this); // Assert with interrupt flag set on same cycle (should still interrupt)
+            cpu.HighIRQ(this); 
             cpu.Cycle(); // SEI
             cpu.LowIRQ(this);
             Assert.AreEqual(CPU.HardwareInterrupt.IRQ, cpu.pending);
             cpu.Cycle(); // IRQ
             Assert.AreEqual("IRQ", cpu.instr.Name);
-
             cpu.CycleInstruction(); // Finish IRQ
             Assert.AreEqual(0x8000, cpu.PC);
-
             cpu.CycleInstruction(); // RTI
             Assert.AreEqual(0xC006, cpu.PC);
 
+            // Assert on correct cycle with flag set
             cpu.Cycle(); // NOP 4
-
-            cpu.HighIRQ(this); // Assert on correct cycle with flag set
+            cpu.HighIRQ(this);
             cpu.Cycle(); // NOP 4
             cpu.LowIRQ(this);
             Assert.AreEqual(null, cpu.pending);
             cpu.Cycle(); // NOP 5
             Assert.AreEqual("NOP impl", cpu.instr.Name);
-
             cpu.Cycle(); // NOP 5
         }
 
