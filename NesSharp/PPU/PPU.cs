@@ -73,9 +73,8 @@ namespace NesSharp.PPU
                     }
                     else if (pixel >= 1 && pixel <= 256)
                     {
-                        //TODO fix
-                        int colorIndex = ((PatternTableShift1 >> (15-x)) & 1) | (((PatternTableShift2 >> (15-x)) & 1) << 1);
-                        int paletteIndex = ((PaletteShift1 >> (7-x)) & 1) | (((PaletteShift2 >> (7-x)) & 1) << 1);
+                        int colorIndex = (((PatternTableShift1 << x) & 0x8000) >> 15) | (((PatternTableShift2 << x) & 0x8000) >> 14);
+                        int paletteIndex = (((PaletteShift1 << x) & 0x80) >> 7) | (((PaletteShift2 << x) & 0x80) >> 6);
                         
                         // currentFrame.SetPixel(pixel-1, scanline, new Color((byte)pixel, (byte)scanline, 1));
                         currentFrame.SetPixel(pixel - 1, scanline,
@@ -111,11 +110,14 @@ namespace NesSharp.PPU
                     else if (pixel == 257)
                     {
                         //hori(v) = hori(t)
+                        //Also probably wrong
                         v = (ushort) ((v & ~0x081f) | (t & 0x081f));
                     }
                     else if(pixel >= 280 && pixel <= 304)
                     {
-                        // v = (ushort) ((v & ~0x77e0) | (t & 0x77e0));
+                        //Also probably wrong
+                        v = (ushort) ((v & ~0x77e0) | (t & 0x77e0));
+
                         // v = t;
 
                     }
@@ -181,14 +183,14 @@ namespace NesSharp.PPU
 
         private void ShiftRegs()
         {
-            PatternTableShift1 <<= 1;
-            PatternTableShift2 <<= 1;
+            PatternTableShift1 = (ushort)(PatternTableShift1 << 1);
+            PatternTableShift2 = (ushort)(PatternTableShift2 << 1);
 
-            PaletteShift1 <<= 1;
-            PaletteShift2 <<= 1;
+            PaletteShift1 = (byte)(PaletteShift1 << 1);
+            PaletteShift2 = (byte)(PaletteShift2 << 1);
 
-            PaletteShift1 |= paletteLatch1;
-            PaletteShift2 |= paletteLatch2;
+            PaletteShift1 |= (byte)(paletteLatch1 & 1);
+            PaletteShift2 |= (byte)(paletteLatch2 & 1);
         }
 
         private void IncrementPixel()
