@@ -165,7 +165,7 @@ namespace NesSharp
             // NMI stays pending until it is handled
             if (pending != HardwareInterrupt.NMI)
             {
-                // An pending NMI interrupt has priority
+                // An incoming NMI interrupt has priority
                 if (incomingNMI)
                 {
                     pending = HardwareInterrupt.NMI;
