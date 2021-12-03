@@ -89,6 +89,105 @@ namespace NesSharpTests
         }
 
         [Test]
+        public void NMI()
+        {
+            // RESET vector
+            bus.Write(0xFFFC, 0x00); 
+            bus.Write(0xFFFD, 0xC0);
+
+            bus.Write(0xC000, 0x38); // SEC
+            bus.Write(0xC001, 0xB0); // BCS $C003
+            bus.Write(0xC002, 0x00);
+            bus.Write(0xC003, 0xEA); // NOP 1
+            bus.Write(0xC004, 0xEA); // NOP 2
+            bus.Write(0xC005, 0x00); // BRK
+            bus.Write(0xC006, 0x00); // BRK
+
+            // IRQ vector
+            bus.Write(0xFFFE, 0x00);
+            bus.Write(0xFFFF, 0x90);
+
+            bus.Write(0x9000, 0x40); // RTI
+
+            // NMI vector
+            bus.Write(0xFFFA, 0x00);
+            bus.Write(0xFFFB, 0x80);
+
+            bus.Write(0x8000, 0x40); // RTI
+
+            // Run
+            cpu.CycleInstruction(); // RESET
+            Assert.AreEqual(0xC000, cpu.PC);
+
+            cpu.Cycle(); // SEC
+            cpu.Cycle(); // SEC
+            cpu.Cycle(); // BCS
+            cpu.Cycle(); // BCS
+
+            // NMI should be delayed because of a non-page-crossing branch
+            cpu.PullNMI();
+            cpu.Cycle(); // BCS
+            cpu.Cycle(); // NOP 1
+            Assert.AreEqual("NOP impl", cpu.instr.Name);
+
+            // NMI should fire after instruction
+            cpu.Cycle(); // NOP 1
+            cpu.Cycle(); // NMI
+            Assert.AreEqual("NMI", cpu.instr.Name);
+            cpu.CycleInstruction(); // Finish NMI
+            Assert.AreEqual(0x8000, cpu.PC);
+            cpu.CycleInstruction(); // RTI
+            Assert.AreEqual(0xC004, cpu.PC);
+
+            // NMI should not reignite now
+            cpu.Cycle(); // NOP 2
+            Assert.AreEqual("NOP impl", cpu.instr.Name);
+            cpu.Cycle(); // NOP 2
+            Assert.AreEqual("NOP impl", cpu.instr.Name);
+            cpu.Cycle(); // BRK
+            Assert.AreEqual("BRK impl", cpu.instr.Name);
+
+            // NMI hijack
+            cpu.Cycle(); // BRK
+            cpu.Cycle(); // BRK
+            cpu.PullNMI();
+            cpu.Cycle(); // BRK
+            Assert.AreEqual("BRK impl", cpu.instr.Name);
+            cpu.Cycle(); // NMI
+            Assert.AreEqual(5, cpu.cycle);
+            Assert.AreEqual("NMI", cpu.instr.Name);
+            cpu.Cycle(); // NMI
+            cpu.Cycle(); // NMI
+            cpu.Cycle(); // RTI
+            Assert.AreEqual("RTI impl", cpu.instr.Name);
+            cpu.CycleInstruction(); // RTI
+            Assert.AreEqual(0xC006, cpu.PC);
+
+            // Failed NMI hijack
+            cpu.Cycle(); // BRK
+            Assert.AreEqual("BRK impl", cpu.instr.Name);
+            cpu.Cycle(); // BRK
+            cpu.Cycle(); // BRK
+            cpu.Cycle(); // BRK
+            cpu.PullNMI();
+            cpu.Cycle(); // BRK
+            Assert.AreEqual("BRK impl", cpu.instr.Name);
+            cpu.Cycle(); // BRK
+            Assert.AreEqual("BRK impl", cpu.instr.Name);
+            cpu.Cycle(); // BRK
+
+            // NMI should now fire afterwards
+            cpu.Cycle(); // NMI
+            Assert.AreEqual("NMI", cpu.instr.Name);
+            cpu.CycleInstruction(); // NMI
+            Assert.AreEqual(0x8000, cpu.PC);
+            cpu.CycleInstruction(); // RTI (NMI)
+            Assert.AreEqual(0x9000, cpu.PC);
+            cpu.CycleInstruction(); // RTI (BRK)
+            Assert.AreEqual(0xC007, cpu.PC);
+        }
+
+        [Test]
         public void IRQ()
         {
             // RESET vector

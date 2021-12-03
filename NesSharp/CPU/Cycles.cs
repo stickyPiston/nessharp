@@ -356,6 +356,11 @@ namespace NesSharp
                 // Interrupt hijack (all hardware interrupts)
                 cpu.CheckPending(true);
 
+                if (cpu.pending == HardwareInterrupt.NMI) {
+                    // Reset NMI on handle
+                    cpu.pending = null;
+                }
+
                 cpu.P.B = 1; // Set B flag
 
                 cpu.Write((ushort) (0x100 | cpu.S), cpu.P.Write());
