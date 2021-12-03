@@ -162,20 +162,23 @@ namespace NesSharp
         private void CycleEnd() {
             previous = pending;
 
-            // An pending NMI interrupt has priority
-            if (incomingNMI)
-            {
-                pending = HardwareInterrupt.NMI;
-                incomingNMI = false;
-            }
-            else if (incomingIRQ.Count > 0 && P.I == 0)
-            {
-                pending = HardwareInterrupt.IRQ;
-            }
             // NMI stays pending until it is handled
-            else if (pending != HardwareInterrupt.NMI)
+            if (pending != HardwareInterrupt.NMI)
             {
-                pending = null;
+                // An pending NMI interrupt has priority
+                if (incomingNMI)
+                {
+                    pending = HardwareInterrupt.NMI;
+                    incomingNMI = false;
+                }
+                else if (incomingIRQ.Count > 0 && P.I == 0)
+                {
+                    pending = HardwareInterrupt.IRQ;
+                }
+                else
+                {
+                    pending = null;
+                }
             }
         }
 
