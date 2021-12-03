@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace NesSharp
 {
@@ -63,7 +64,7 @@ namespace NesSharp
         public Flags P;
 
         // Micro-instruction data
-        enum AddressingMode
+        public enum AddressingMode
         {
             NONE,
             ACC, IMP, IMM, REL,
@@ -72,7 +73,7 @@ namespace NesSharp
             ABS, ABSX, ABSY,
         }
 
-        struct Instruction
+        public struct Instruction
         {
             public string Name;
             public AddressingMode Mode;
@@ -98,10 +99,10 @@ namespace NesSharp
             }
         }
 
-        private Instruction instr;
-        private byte cycle;
+        public Instruction instr { get; private set; }
+        public byte cycle { get; private set; }
         public byte val { get; private set; }
-        private ushort addr;
+        public ushort addr { get; private set; }
 
     #if DEBUG
         private bool _read;
@@ -110,14 +111,16 @@ namespace NesSharp
     #endif
 
         // Interrupts
-        enum HardwareInterrupt
+        public enum HardwareInterrupt
         {
             NMI, IRQ
         }
 
-        private HardwareInterrupt? incoming; // next cycle
-        private HardwareInterrupt? pending;  // this cycle
-        private HardwareInterrupt? previous; // previous cycle
+        private ISet<object> incomingIRQ = new HashSet<object>();
+        private bool incomingNMI;
+
+        public HardwareInterrupt? pending  { get; private set; } // this cycle
+        public HardwareInterrupt? previous { get; private set; } // previous cycle
 
         public CPU(IAddressable bus)
         {
@@ -136,19 +139,19 @@ namespace NesSharp
             this.cycle = 0;
         }
 
-        public void AssertNMI()
+        public void PullNMI()
         {
-            incoming = HardwareInterrupt.NMI;
+            incomingNMI = true;
         }
 
-        public void AssertIRQ()
+        public void HighIRQ(object sender)
         {
-            // An incoming NMI interrupt has priority
-            // Ignore if interrupt disable flag is 1
-            if (incoming != HardwareInterrupt.NMI && P.I == 0)
-            {
-                incoming = HardwareInterrupt.IRQ;
-            }
+            incomingIRQ.Add(sender);
+        }
+
+        public void LowIRQ(object sender)
+        {
+            incomingIRQ.Remove(sender);
         }
 
         private void SetInstruction(Instruction instr)
@@ -159,11 +162,24 @@ namespace NesSharp
         private void CycleEnd() {
             previous = pending;
 
-            // An incoming NMI interrupt has priority
-            // Reset IRQ signal (should only be high for 1 cycle)
-            if (pending == HardwareInterrupt.IRQ) pending = incoming;
-
-            incoming = null;
+            // NMI stays pending until it is handled
+            if (pending != HardwareInterrupt.NMI)
+            {
+                // An incoming NMI interrupt has priority
+                if (incomingNMI)
+                {
+                    pending = HardwareInterrupt.NMI;
+                    incomingNMI = false;
+                }
+                else if (incomingIRQ.Count > 0 && P.I == 0)
+                {
+                    pending = HardwareInterrupt.IRQ;
+                }
+                else
+                {
+                    pending = null;
+                }
+            }
         }
 
         public void Cycle(int amount) {
@@ -195,17 +211,19 @@ namespace NesSharp
                 if (pending != null)
                 {
                     // Poll next interrupt
-                    SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                     cycle = 0;
+                    SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                 }
                 else
                 {
                     // Fetch next instruction, execute first cycle
+                    cycle = 0;
                     ValFromPC(this);
                     SetInstruction(instructions[val]);
                     
-                    cycle = 1;
+                    // Continue to next cycle
                     CycleEnd();
+                    cycle += 1;
 
                     // Return so we don't execute another cycle
                     return;
@@ -217,7 +235,7 @@ namespace NesSharp
 
             // Continue to next cycle
             CycleEnd();
-            unchecked { cycle += 1; }
+            cycle += 1;
         }
 
         public string DumpCycle() {

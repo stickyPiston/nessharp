@@ -14,12 +14,48 @@ namespace NesSharp {
     };
 
     public class Bus : IAddressable {
+        private CPU cpu;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        //public run(string romFilepath) { when the rom accepts roms
-        public void run() {
+        private byte clock = 0;
+
+        public Bus() {
+            cpu = new CPU(this);
+        }
+
+        //public Run(string romFilepath) { when the emulator accepts roms
+        public void Run() {
             throw new NotImplementedException();
+        }
+
+        public void Tick() {
+            // ppu.Cycle();
+            if (clock % 3 == 0) cpu.Cycle();
+            // if (clock % 6 == 0) apu.Cycle();
+
+            // TODO: OAM DMA
+
+            clock += 1;
+            clock %= 6;
+        }
+
+        /// <summary>Sends a non-maskable interrupt to the CPU</summary>
+        public void PullNMI()
+        {
+            cpu.PullNMI();
+        }
+
+        /// <summary>Keeps the IRQ line from the sender to the CPU high, until LowIRQ is called.</summary>
+        public void HighIRQ(object sender)
+        {
+            cpu.HighIRQ(sender);
+        }
+
+        /// <summary>Resets the IRQ line from the sender to the CPU.</summary>
+        public void LowIRQ(object sender)
+        {
+            cpu.LowIRQ(sender);
         }
 
         public void Register(IAddressable chip, Range[] ranges) {
