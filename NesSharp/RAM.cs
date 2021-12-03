@@ -4,7 +4,7 @@
     {
         private byte[] Data;
 
-        public RAM (ushort Capacity)
+        public RAM (int Capacity) // int because 65536 (the maximum storage amount) doesn't fit in a ushort
         {
             Data = new byte[Capacity];
         }

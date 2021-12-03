@@ -5,21 +5,6 @@ using NesSharp;
 
 namespace NesSharpTests
 {
-    class BigRAM : IAddressable
-    {
-        private byte[] data = new byte[65536];
-
-        public byte Read(ushort addr)
-        {
-            return this.data[addr];
-        }
-
-        public void Write(ushort addr, byte data)
-        {
-            // if (addr == 0 && data != 0) throw new Exception(string.Format("Wrong CPU implementation! Error code {0:X2}", data));
-            this.data[addr] = data;
-        }
-    }
     public class CPUTests
     {
         private IAddressable bus;
@@ -28,7 +13,7 @@ namespace NesSharpTests
         [SetUp]
         public void Setup()
         {
-            bus = new BigRAM();
+            bus = new RAM(65536);
             cpu = new CPU(bus);
         }
 

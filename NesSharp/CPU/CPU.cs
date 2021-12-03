@@ -139,7 +139,7 @@ namespace NesSharp
             this.cycle = 0;
         }
 
-        public void AssertNMI()
+        public void PullNMI()
         {
             incomingNMI = true;
         }
