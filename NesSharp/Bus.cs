@@ -18,7 +18,7 @@ namespace NesSharp {
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        private byte clock;
+        private byte clock = 0;
 
         public Bus() {
             cpu = new CPU(this);
