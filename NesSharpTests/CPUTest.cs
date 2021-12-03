@@ -98,10 +98,11 @@ namespace NesSharpTests
             bus.Write(0xC000, 0x38); // SEC
             bus.Write(0xC001, 0xB0); // BCS $C003
             bus.Write(0xC002, 0x00);
-            bus.Write(0xC003, 0xEA); // NOP 1
-            bus.Write(0xC004, 0xEA); // NOP 2
-            bus.Write(0xC005, 0x00); // BRK
+            bus.Write(0xC003, 0x90); // BCC $C005
+            bus.Write(0xC004, 0x00);
+            bus.Write(0xC005, 0xEA); // NOP
             bus.Write(0xC006, 0x00); // BRK
+            bus.Write(0xC007, 0x00); // BRK
 
             // IRQ vector
             bus.Write(0xFFFE, 0x00);
@@ -127,22 +128,24 @@ namespace NesSharpTests
             // NMI should be delayed because of a non-page-crossing branch
             cpu.PullNMI();
             cpu.Cycle(); // BCS
-            cpu.Cycle(); // NOP 1
-            Assert.AreEqual("NOP impl", cpu.instr.Name);
+            cpu.Cycle(); // BCC
+            Assert.AreEqual("BCC rel", cpu.instr.Name);
+            Assert.AreEqual(1, cpu.cycle);
 
             // NMI should fire after instruction
-            cpu.Cycle(); // NOP 1
+            cpu.Cycle(); // BCC
+            Assert.AreEqual("BCC rel", cpu.instr.Name);
             cpu.Cycle(); // NMI
             Assert.AreEqual("NMI", cpu.instr.Name);
             cpu.CycleInstruction(); // Finish NMI
             Assert.AreEqual(0x8000, cpu.PC);
             cpu.CycleInstruction(); // RTI
-            Assert.AreEqual(0xC004, cpu.PC);
+            Assert.AreEqual(0xC005, cpu.PC);
 
             // NMI should not reignite now
-            cpu.Cycle(); // NOP 2
+            cpu.Cycle(); // NOP
             Assert.AreEqual("NOP impl", cpu.instr.Name);
-            cpu.Cycle(); // NOP 2
+            cpu.Cycle(); // NOP
             Assert.AreEqual("NOP impl", cpu.instr.Name);
             cpu.Cycle(); // BRK
             Assert.AreEqual("BRK impl", cpu.instr.Name);
@@ -161,7 +164,7 @@ namespace NesSharpTests
             cpu.Cycle(); // RTI
             Assert.AreEqual("RTI impl", cpu.instr.Name);
             cpu.CycleInstruction(); // RTI
-            Assert.AreEqual(0xC006, cpu.PC);
+            Assert.AreEqual(0xC007, cpu.PC);
 
             // Failed NMI hijack
             cpu.Cycle(); // BRK
@@ -184,7 +187,7 @@ namespace NesSharpTests
             cpu.CycleInstruction(); // RTI (NMI)
             Assert.AreEqual(0x9000, cpu.PC);
             cpu.CycleInstruction(); // RTI (BRK)
-            Assert.AreEqual(0xC007, cpu.PC);
+            Assert.AreEqual(0xC008, cpu.PC);
         }
 
         [Test]

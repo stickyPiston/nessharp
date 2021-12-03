@@ -208,17 +208,19 @@ namespace NesSharp
                 if (pending != null)
                 {
                     // Poll next interrupt
-                    SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                     cycle = 0;
+                    SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                 }
                 else
                 {
                     // Fetch next instruction, execute first cycle
+                    cycle = 0;
                     ValFromPC(this);
                     SetInstruction(instructions[val]);
                     
-                    cycle = 1;
+                    // Continue to next cycle
                     CycleEnd();
+                    cycle += 1;
 
                     // Return so we don't execute another cycle
                     return;
@@ -230,7 +232,7 @@ namespace NesSharp
 
             // Continue to next cycle
             CycleEnd();
-            unchecked { cycle += 1; }
+            cycle += 1;
         }
 
         public string DumpCycle() {

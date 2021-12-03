@@ -24,31 +24,21 @@ namespace NesSharp
         }
 
         /// <summary>Checks if an interrupt is pending.
-        /// If so, it switches execution to said interrupt at cycle 0.
-        /// Otherwise it switches to the specified instruction at cycle 1.</summary>
-        private void SetInstructionCheckPending(Instruction instr)
-        {
-            if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle
-            else
-            {
-                SetInstruction(instr);
-                this.cycle = 0;
-            }
-        }
-
-        /// <summary>Checks if an interrupt is pending.
-        /// If so, it switches execution to said interrupt at cycle 0.
+        /// If so, it switches execution to said interrupt and executes the first cycle.
         /// Otherwise it reads the PC and switches to the next instruction at cycle 1.</summary>
-        private void NextInstruction()
+        private void NextInstruction(bool checkPending = true)
         {
-            if (CheckPending()) this.cycle = 255; // wraps back to 0 next cycle
+            if (checkPending && CheckPending())
+            {
+                cycle = 0;
+                instr.Cycles[0](this);
+            }
             else
             {
+                cycle = 0;
                 byte next = Read(PC);
                 unchecked { PC += 1; }
-
                 SetInstruction(instructions[next]);
-                cycle = 0;
             }
         }
 
@@ -96,10 +86,11 @@ namespace NesSharp
         private void Branch(bool b)
         {
             byte operand = this.val;
-            byte next = Read(this.PC);
 
             if (b) {
                 // Branch
+                Read(this.PC);
+
                 // Save PCH for later
                 unchecked {
                     sbyte a = (sbyte) operand;
@@ -114,8 +105,7 @@ namespace NesSharp
                 this.PC |= PCL;
             } else {
                 // Next instruction
-                unchecked { this.PC += 1; }
-                SetInstructionCheckPending(instructions[next]);
+                NextInstruction();
             }
         }
 
@@ -124,22 +114,17 @@ namespace NesSharp
         /// <summary>Fixes the high byte of the PC after a branch, as it can sometimes be off by 0x0100.</summary>
         private static Cycle FixPC = cpu => {
             byte PCH = cpu.val;
-            byte next = cpu.Read(cpu.PC);
 
             if ((byte) (cpu.PC >> 8) != PCH) {
                 // Different page
+                cpu.Read(cpu.PC);
+
                 cpu.PC &= 0x00FF;
                 cpu.PC |= (ushort) (PCH << 8);
             } else {
                 // Next instruction
-                unchecked { cpu.PC += 1; }
-
                 // "a taken non-page-crossing branch ignores IRQ/NMI during its last clock, so that next instruction executes before the IRQ"
-                if (cpu.pending != null && cpu.previous == null) {
-                    cpu.SetInstruction(instructions[next]);
-                } else {
-                    cpu.SetInstructionCheckPending(instructions[next]);
-                }
+                cpu.NextInstruction(cpu.previous != null);
             }
 
         };
