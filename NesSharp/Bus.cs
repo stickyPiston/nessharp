@@ -1,19 +1,55 @@
-﻿using System;
+﻿using System.Threading;
 using System.Collections.Generic;
-using System.Text;
+using System;
 
-namespace NesSharp
-{
-    class Bus : IAddressable
-    {
-        public byte Read(ushort addr)
-        {
+namespace NesSharp {
+    public struct Range {
+        public ushort start;
+        public ushort end;
+
+        public Range(ushort start, ushort end) {
+            this.start = start;
+            this.end = end;
+        }
+    };
+
+    public class Bus : IAddressable {
+        private List<IAddressable> chips = new List<IAddressable>();
+        private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
+
+        //public run(string romFilepath) { when the rom accepts roms
+        public void run() {
             throw new NotImplementedException();
         }
 
-        public void Write(ushort addr, byte data)
-        {
-            throw new NotImplementedException();
+        public void Register(IAddressable chip, Range[] ranges) {
+            chips.Add(chip);
+            foreach(var range in ranges)
+            {
+                this.ranges.Add(range, chip);
+            }
         }
-    }
+
+        public byte Read(ushort addr) {
+            foreach(KeyValuePair<Range, IAddressable> range in ranges)
+            {
+                if(addr >= range.Key.start && addr <= range.Key.end)
+                {
+                    return range.Value.Read(addr);
+                }
+            }
+            return 0;
+        }
+
+        public void Write(ushort addr, byte data) {
+           foreach(KeyValuePair<Range, IAddressable> range in ranges)
+           {
+                if(addr >= range.Key.start && addr <= range.Key.end)
+                {
+                    range.Value.Write(addr, data);
+                    return;
+                }
+           }
+        }
+    };
 }
