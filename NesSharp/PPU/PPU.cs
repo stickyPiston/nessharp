@@ -26,6 +26,9 @@ namespace NesSharp.PPU
         private ushort PatternTableShift1;
         private ushort PatternTableShift2;
 
+        private byte paletteLatch1;
+        private byte paletteLatch2;
+
         private byte PaletteShift1;
         private byte PaletteShift2;
 
@@ -54,76 +57,138 @@ namespace NesSharp.PPU
         private byte nametableByte;
         private byte attrtableByte;
         private ushort patterntableWord;
+
         public void Cycle()
         {
             if (mask.ShowBackground)
             {
-                if (scanline >= 0 && scanline <= 239)
+                if (scanline <= 239)
                 {
+
+                        // ShiftRegs();
+
                     if (pixel == 0)
                     {
+                        
                     }
                     else if (pixel >= 1 && pixel <= 256)
                     {
-                        int colorIndex = ((PatternTableShift1 >> (8 + x)) & 1) | ((PatternTableShift2 >> (7 + x)) & 2);
-                        int PaletteIndex = ((PaletteShift1 >> x) & 1) | ((PaletteShift2 >> (x - 1)) & 2);
+                        //TODO fix
+                        int colorIndex = ((PatternTableShift1 >> (15-x)) & 1) | (((PatternTableShift2 >> (15-x)) & 1) << 1);
+                        int paletteIndex = ((PaletteShift1 >> (7-x)) & 1) | (((PaletteShift2 >> (7-x)) & 1) << 1);
+                        
                         // currentFrame.SetPixel(pixel-1, scanline, new Color((byte)pixel, (byte)scanline, 1));
-                        currentFrame.SetPixel(pixel-1, scanline, bus.Palettes.Backgrounds[PaletteIndex].Colors[colorIndex * 3 + 5+ PaletteIndex]);
+                        currentFrame.SetPixel(pixel - 1, scanline,
+                            colorIndex == 0
+                                ? bus.Palettes.background
+                                : bus.Palettes.Backgrounds[paletteIndex].Colors[colorIndex-1]);
                         ShiftRegs();
-                        switch (pixel % 8)
-                        {
-                            case 1:
-                                tempBackgroundByte = getTile();
-                                break;
-                            case 2:
-                                nametableByte = tempBackgroundByte;
-                                break;
-                            case 3:
-                                tempBackgroundByte = getTileAttr();
-                                break;
-                            case 4:
-                                attrtableByte = tempBackgroundByte;
-                                break;
-                            case 5:
-                                tempBackgroundByte = bus.Read((ushort)(control.BackgroundPatterntableAddress + nametableByte));
-                                break;
-                            case 6:
-                                patterntableWord = (ushort)(tempBackgroundByte << 8);
-                                break;
-                            case 7:
-                                tempBackgroundByte = bus.Read((ushort)(control.BackgroundPatterntableAddress + nametableByte + 8));
-                                break;
-                            case 0:
-                                patterntableWord |= tempBackgroundByte;
-                                // PaletteShift1 = attrtableByte;
-                                // PaletteShift2 = attrtableByte;
-                                PatternTableShift1 |= (ushort) (patterntableWord & 0x00ff);
-                                PatternTableShift2 |= (ushort) ((patterntableWord >> 8) & 0x00ff);
-                                if (pixel == 256)
-                                    YIncrement();
-                                else 
-                                    XIncrement();
-                                break;
-                            
-                        }
+                        DoBackgroundFetches();
                     }
                     else if (pixel == 257)
                     {
                         v = (ushort) ((v & ~0x041f) | (t & 0x041f));
                     }
+                    else if (pixel >= 321 && pixel <= 336)
+                    {
+                        ShiftRegs();
+                        DoBackgroundFetches();
+                    }
                     //throw new System.NotImplementedException();
+                }
+                else if (scanline == 261)
+                {
+                    if (pixel == 0)
+                    {
+                        
+                    }
+                    else if (pixel >= 1 && pixel <= 256)
+                    {
+                        // TODO
+                        // ShiftRegs();
+                        // DoBackgroundFetches();
+                    }
+                    else if (pixel == 257)
+                    {
+                        //hori(v) = hori(t)
+                        v = (ushort) ((v & ~0x081f) | (t & 0x081f));
+                    }
+                    else if(pixel >= 280 && pixel <= 304)
+                    {
+                        // v = (ushort) ((v & ~0x77e0) | (t & 0x77e0));
+                        // v = t;
+
+                    }
+                    else if (pixel >= 321 && pixel <= 336)
+                    {
+                        ShiftRegs();
+                        DoBackgroundFetches();
+                    }
                 }
             }
 
             IncrementPixel();
         }
 
+        private void DoBackgroundFetches()
+        {
+            switch (pixel % 8)
+            {
+                case 1:
+                    tempBackgroundByte = getTile();
+                    break;
+                case 2:
+                    nametableByte = tempBackgroundByte;
+                    break;
+                case 3:
+                    tempBackgroundByte = getTileAttr();
+                    break;
+                case 4:
+                    attrtableByte = tempBackgroundByte;
+                    break;
+                case 5:
+                    tempBackgroundByte =
+                        bus.Read((ushort) (control.BackgroundPatterntableAddress + nametableByte + (v >> 12)));
+                    break;
+                case 6:
+                    patterntableWord = (ushort) (tempBackgroundByte << 8);
+                    break;
+                case 7:
+                    tempBackgroundByte =
+                        bus.Read((ushort) (control.BackgroundPatterntableAddress + nametableByte + 8+ (v >> 12)));
+                    break;
+                case 0:
+                    patterntableWord |= tempBackgroundByte;
+                    paletteLatch1 = (byte) ((attrtableByte >> (
+                        ((v & 0x40) >> 6) |
+                        ((v & 0b10) << 0)
+                    )) & 1);
+                    paletteLatch2 = (byte) ((attrtableByte >> (
+                        (((v & 0x40) >> 6) |
+                         ((v & 0b10) << 0)) + 1
+                    )) & 1);
+                    // paletteLatch1 = (byte) ((attrtableByte >> (((v & 0x4000) >> 12) | ((x & 0b100)))) & 2);
+                    // paletteLatch2 = (byte) (((attrtableByte >> (((v & 0x4000) >> 12) | ((x & 0b100)))) >> 2) & 1);
+                    PatternTableShift1 |= (ushort) (patterntableWord & 0x00ff);
+                    PatternTableShift2 |= (ushort) ((patterntableWord >> 8) & 0x00ff);
+                    if (pixel == 256)
+                        YIncrement();
+                    else
+                        XIncrement();
+                    break;
+            }
+        }
+
         private void ShiftRegs()
         {
             PatternTableShift1 <<= 1;
             PatternTableShift2 <<= 1;
+
             PaletteShift1 <<= 1;
             PaletteShift2 <<= 1;
+
+            PaletteShift1 |= paletteLatch1;
+            PaletteShift2 |= paletteLatch2;
         }
 
         private void IncrementPixel()
@@ -136,7 +201,6 @@ namespace NesSharp.PPU
                 if (scanline == 0)
                 {
                     ODDFRAME = !ODDFRAME;
-                    frameBuffer.Update(currentFrame);
                 }
             }
 
@@ -205,7 +269,8 @@ namespace NesSharp.PPU
                     y += 1;
                 }
 
-                v = (ushort) ((v & 0xfb1f) | (y << 5));
+                v = (ushort) ((v & 0xfc1f) | (y << 5));
+
             }
         }
 
@@ -279,14 +344,7 @@ namespace NesSharp.PPU
                 default:
                     throw new NotImplementedException($"Writing to address 0x{addr:X4} is not implemented");
             }
-
-            if (addr == 0x2001)
-            {
-                mask.FromByte(data);
-                return;
-            }
-
-            throw new NotImplementedException();
+            
         }
     }
 }
