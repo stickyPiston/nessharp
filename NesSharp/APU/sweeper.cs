@@ -2,7 +2,28 @@ using System;
 
 namespace NesSharp
 {
-    
+    class sequencer
+    {
+        public byte sequence = 0x00000000;
+        public byte new_sequence = 0x00000000;
+        private UInt16 timer = 0x0000;
+        private byte reload = 0x0000;
+        public byte output = 0x00;
+        public int Clock(bool bEnable, Func<uint, uint> funcManip)
+		{
+			if (bEnable)
+			{
+				timer--;
+				if (timer == 0xFFFF)
+				{
+					timer = reload;
+					funcManip(sequence);
+                    output = (byte)(sequence & 0x00000001);
+				}
+            }
+        return output;
+		}
+    }
     class Sweeper
     {
         public bool enabled = true;
