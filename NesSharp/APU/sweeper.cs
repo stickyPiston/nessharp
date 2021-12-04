@@ -57,7 +57,7 @@ namespace NesSharp
             return changed;
         }
     }
-    class lengthcounter
+    class Lengthcounter
     {
         UInt16 counter = 0x00;
         UInt16 clock(bool bEnable, bool bHalt)
@@ -71,7 +71,7 @@ namespace NesSharp
         }
     }
 
-    class oscpulse
+    class Oscpulse
     {
         double frequency = 0;
         double dutycycle = 0;
@@ -79,7 +79,7 @@ namespace NesSharp
         double pi = 3.14159;
         double harmonics = 20;
 
-        double sample(double t)
+        double Sample(double t)
         {
             double a = 0;
             double b = 0;
@@ -104,5 +104,4 @@ namespace NesSharp
         }
     }
 
-    class sweeper { }
 }
