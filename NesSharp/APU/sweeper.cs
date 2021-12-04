@@ -2,6 +2,8 @@ using System;
 
 namespace NesSharp
 {
+    
+
     class Sweeper
     {
         public bool enabled = true;
@@ -55,5 +57,19 @@ namespace NesSharp
             mute = (target < 8) || (target > 0x7FF);
             return changed;
         }
-    };
-};
+    }
+    class lengthcounter
+    {
+        UInt16 counter = 0x00;
+        UInt16 clock(bool bEnable, bool bHalt)
+        {
+            if (!bEnable)
+                counter = 0;
+            else
+                if (counter > 0 && !bHalt)
+                counter--;
+            return counter;
+        }
+    }
+
+}
