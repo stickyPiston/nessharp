@@ -23,4 +23,8 @@
     <ProjectReference Include="..\NesSharp\NesSharp.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\NesSharp\NesSharp.csproj" />
+  </ItemGroup>
+
 </Project>
