@@ -48,7 +48,7 @@ namespace NesSharpTests {
 
       var sound = new Sound(buffer);
       if (sound == null) return 1;
-      
+
       return 0;
     }
   }
