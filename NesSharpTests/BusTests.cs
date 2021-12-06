@@ -70,6 +70,10 @@ namespace NesSharpTests {
             ram.Write(0xC004, 0x01);
 
             bus.Register(ram, new Range[] { new Range(0xC000, 0xFFFF) });
+            
+            var cpu = new CPU(bus);
+
+            bus.Register(cpu);
 
             for (int i = 0; i < 15 * 3; i++) bus.Tick();
 

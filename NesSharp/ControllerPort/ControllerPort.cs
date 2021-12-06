@@ -6,7 +6,7 @@ namespace NesSharp
     {
         private InputDevice[] Cs = new InputDevice[]{null, null};
         private byte LastWritten = 0;
-
+        
         public byte Read(ushort addr) => (byte)((addr == 0x4016 || addr == 0x4017) ? Cs[addr - 0x4016].Read() : 0x0);
 
         public void Write(ushort addr, byte data)

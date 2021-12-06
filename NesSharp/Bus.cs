@@ -20,24 +20,23 @@ namespace NesSharp {
 
         private byte clock = 0;
 
-        public Bus() {
-            cpu = new CPU(this);
-        }
-
         //public Run(string romFilepath) { when the emulator accepts roms
         public void Run() {
-            throw new NotImplementedException();
+            for(int i = 0; i < 29780 * 3; i++)
+            {
+                this.Tick();
+            }
         }
 
         public void Tick() {
             // ppu.Cycle();
-            if (clock % 3 == 0) cpu.Cycle();
-            // if (clock % 6 == 0) apu.Cycle();
+            if (clock == 0) cpu.Cycle();
+            // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
 
             // TODO: OAM DMA
 
             clock += 1;
-            clock %= 6;
+            clock %= 3;
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>
@@ -64,6 +63,11 @@ namespace NesSharp {
             {
                 this.ranges.Add(range, chip);
             }
+        }
+
+        public void Register(CPU cpu)
+        {
+            this.cpu = cpu;
         }
 
         public byte Read(ushort addr) {
