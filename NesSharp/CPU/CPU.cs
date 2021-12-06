@@ -80,22 +80,24 @@ namespace NesSharp
             public Cycle[] Cycles;
             public bool ReadsAddr;
             public bool WritesAddr;
+            public bool Illegal;
 
-            public Instruction(string name, AddressingMode mode, bool readsAddr, Cycle[] cycles, bool writesAddr = false) {
+            public Instruction(string name, AddressingMode mode, bool readsAddr, Cycle[] cycles, bool writesAddr = false, bool illegal = false) {
                 Name = name;
                 Mode = mode;
                 ReadsAddr = readsAddr;
                 WritesAddr = writesAddr;
+                Illegal = illegal;
 
                 Cycle[] modeCycles = addressingInstructions[(int) mode];
-                Cycles = new Cycle[modeCycles.Length + cycles.Length + (readsAddr ? 1 : 0) + (writesAddr ? 1 : 0)];
+                Cycles = new Cycle[modeCycles.Length + cycles.Length + (readsAddr ? 1 : 0) + (readsAddr && writesAddr ? 1 : 0)];
 
                 modeCycles.CopyTo(Cycles, 0);
                 if (readsAddr)
                     Cycles[modeCycles.Length] = ValFromAddr;
                 cycles.CopyTo(Cycles, modeCycles.Length + (readsAddr ? 1 : 0));
-                if (writesAddr)
-                    Cycles[modeCycles.Length + cycles.Length + (readsAddr ? 1 : 0)] = WriteVal;
+                if (readsAddr && writesAddr)
+                    Cycles[modeCycles.Length + cycles.Length + 1] = WriteVal;
             }
         }
 
@@ -240,11 +242,11 @@ namespace NesSharp
 
         public string DumpCycle() {
         #if DEBUG
-            return string.Format("{6} #{7} | {10} ${11:X4} = {12:X2} | addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} SP:01{4:X2} PC:{5:X4}",
-                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, addr, val, _read ? "READ " : "WRITE", _addr, _data);
+            return string.Format("{13}{6} #{7} | {10} ${11:X4} = {12:X2} | addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} SP:01{4:X2} PC:{5:X4}",
+                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, addr, val, _read ? "READ " : "WRITE", _addr, _data, instr.Illegal ? '*' : ' ');
         #else
-            return string.Format("{6} #{7} | addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
-                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, addr, val);
+            return string.Format("{10}{6} #{7} | addr:{8:X4} val:{9:X2} | A:{0:X2} X:{1:X2} Y:{2:X2} P:{3} S:01{4:X2} PC:{5:X4}",
+                A, X, Y, P.Dump(), S, PC, instr.Name.PadRight(9, ' '), cycle - 1, addr, val, instr.Illegal ? '*' : ' ');
         #endif
         }
     }

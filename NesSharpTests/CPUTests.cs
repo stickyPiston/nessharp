@@ -78,14 +78,12 @@ namespace NesSharpTests
 
             // Run
             Console.WriteLine();
-            while (cycle < 14581) // Run until illegal opcode tests
+            while (cpu.PC != 0x0000)
             {
                 cpu.Cycle();
-                Console.WriteLine(cycle.ToString().PadLeft(5, '0') + " | " + cpu.DumpCycle());
+                Console.WriteLine(cycle.ToString().PadLeft(5, '0') + " |" + cpu.DumpCycle());
                 cycle += 1;
             }
-
-            Assert.AreEqual(0x04, cpu.val); // The next should be an illegal opcode
         }
 
         [Test]
