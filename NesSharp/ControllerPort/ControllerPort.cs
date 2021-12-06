@@ -11,12 +11,11 @@ namespace NesSharp
 
         public void Write(ushort addr, byte data)
         {
-           LastWritten = data;
-                         
            if(data == 0 && LastWritten == 1)
            {
-                Cs[addr - 0x4016].latchInput();
+               Cs[addr - 0x4016].latchInput();
            }
+           LastWritten = data;
         }
 
         public void register(InputDevice D)

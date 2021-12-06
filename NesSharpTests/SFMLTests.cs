@@ -48,12 +48,6 @@ namespace NesSharpTests {
 
       var sound = new Sound(buffer);
       if (sound == null) return 1;
-
-      sound.Play();
-
-      while (sound.Status == SoundStatus.Playing) {
-        Thread.Sleep(100);
-      }
       
       return 0;
     }
