@@ -583,6 +583,12 @@ namespace NesSharp
             cpu.NextInstruction();
         };
 
+        private static Cycle LAX = cpu => {
+            cpu.X = cpu.A = cpu.val;
+            cpu.SetFlags(cpu.val);
+            cpu.NextInstruction();
+        };
+
         private static Cycle LDX = cpu => {
             cpu.X = cpu.val;
             cpu.SetFlags(cpu.X);
@@ -598,6 +604,7 @@ namespace NesSharp
         private static Cycle STA = cpu => cpu.Write(cpu.addr, cpu.A);
         private static Cycle STX = cpu => cpu.Write(cpu.addr, cpu.X);
         private static Cycle STY = cpu => cpu.Write(cpu.addr, cpu.Y);
+        private static Cycle SAX = cpu => cpu.Write(cpu.addr, (byte) (cpu.A & cpu.X));
 
         private static Cycle DEC = cpu => {
             cpu.Write(cpu.addr, cpu.val);
@@ -609,6 +616,76 @@ namespace NesSharp
             cpu.Write(cpu.addr, cpu.val);
             unchecked { cpu.val += 1; }
             cpu.SetFlags(cpu.val);
+        };
+
+        private static Cycle ISB = cpu => {
+            // INC
+            cpu.Write(cpu.addr, cpu.val);
+            unchecked { cpu.val += 1; }
+
+            // SBC
+            cpu.A = cpu.Add(cpu.A, (byte) ~cpu.val, cpu.P.C);
+            cpu.SetFlags(cpu.A);
+        };
+
+        private static Cycle DCP = cpu => {
+            // DEC
+            cpu.Write(cpu.addr, cpu.val);
+            unchecked { cpu.val -= 1; }
+
+            // CMP
+            ushort q = (ushort) (((ushort) cpu.A | 0x0100) - cpu.val);
+
+            cpu.P.C = (byte) (q >> 8);
+            cpu.SetFlags((byte) q);
+        };
+
+        private static Cycle SLO = cpu => {
+            // ASL
+            byte operand = cpu.val;
+            cpu.val = (byte) (operand << 1);
+            cpu.P.C = (byte) (operand >> 7);
+            cpu.Write(cpu.addr, operand);
+
+            // ORA
+            cpu.A |= cpu.val;
+            cpu.SetFlags(cpu.A);
+        };
+
+        private static Cycle RLA = cpu => {
+            // ROL
+            byte operand = cpu.val;
+            cpu.val = (byte) (operand << 1 | cpu.P.C);
+            cpu.P.C = (byte) (operand >> 7);
+            cpu.Write(cpu.addr, operand);
+
+            // AND
+            cpu.A &= cpu.val;
+            cpu.SetFlags(cpu.A);
+        };
+
+        private static Cycle SRE = cpu => {
+            // LSR
+            byte operand = cpu.val;
+            cpu.val = (byte) (operand >> 1);
+            cpu.P.C = (byte) (operand & 1);
+            cpu.Write(cpu.addr, operand);
+
+            // EOR
+            cpu.A ^= cpu.val;
+            cpu.SetFlags(cpu.A);
+        };
+
+        private static Cycle RRA = cpu => {
+            // ROR
+            byte operand = cpu.val;
+            cpu.val = (byte) (operand >> 1 | cpu.P.C << 7);
+            cpu.P.C = (byte) (operand & 1);
+            cpu.Write(cpu.addr, operand);
+
+            // ADC
+            cpu.A = cpu.Add(cpu.A, cpu.val, cpu.P.C);
+            cpu.SetFlags(cpu.A);
         };
 
         private static Cycle BIT = cpu => {
@@ -650,6 +727,10 @@ namespace NesSharp
 
         private static Cycle CLV = cpu => {
             cpu.P.V = 0;
+            cpu.NextInstruction();
+        };
+
+        private static Cycle NOP = cpu => {
             cpu.NextInstruction();
         };
 
