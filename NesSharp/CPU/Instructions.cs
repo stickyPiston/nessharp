@@ -232,14 +232,7 @@ namespace NesSharp
                                else           { cycle = SBC; name = "SBC"; readsAddr = true; illegal = true; }  break;
                 }
 
-                if (cycle == null)
-                {
-                    continue;
-                }
-                else
-                {
-                    name += " " + addressingNames[(int) mode];
-                }
+                name += " " + addressingNames[(int) mode];
 
                 if (mode == AddressingMode.IMM || mode == AddressingMode.IMP || mode == AddressingMode.ACC)
                 {

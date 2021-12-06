@@ -184,10 +184,6 @@ namespace NesSharp
             }
         }
 
-        public void Cycle(int amount) {
-            for (int i = 0; i < amount; i++) Cycle();
-        }
-
         public int CycleInstruction() {
             int cycles = 1;
 
