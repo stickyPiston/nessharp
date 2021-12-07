@@ -4,7 +4,7 @@
     {
         public IAddressable Patterntables;
         public IAddressable Nametables;
-        public PPU_Palettes Palettes;
+        public PPUPalettes Palettes;
 
 
         public byte Read(ushort addr)

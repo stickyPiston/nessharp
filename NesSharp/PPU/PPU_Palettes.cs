@@ -2,7 +2,7 @@
 
 namespace NesSharp.PPU
 {
-    public class PPU_Palettes
+    public class PPUPalettes
     {
         public Color background;
         public Palette[] Backgrounds;

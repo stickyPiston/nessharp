@@ -70,6 +70,16 @@ namespace NesSharp.PPU
         private byte oamAddr = 0;
         private byte secOamIndex = 0;
         private int copySpriteDataCounter;
+
+        public int FrameCycleCount()
+        {
+            if ((mask.ShowBackground || mask.ShowSprites) && ODDFRAME) {
+                return 262 * 341 - 1;
+            } else {
+                return 262 * 341;
+            }
+        }
+
         public void Cycle()
         {
             if (mask.ShowBackground)
@@ -276,9 +286,11 @@ namespace NesSharp.PPU
 
             if (mask.ShowBackground || mask.ShowSprites)
             {
-                if (scanline == 0 && pixel == 0 && ODDFRAME)
+                if (scanline == 261 && pixel == 340 && ODDFRAME)
                 {
-                    pixel++;
+                    pixel = 0;
+                    scanline = 0;
+                    ODDFRAME = !ODDFRAME;
                 }
             }
         }

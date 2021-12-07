@@ -15,21 +15,23 @@ namespace NesSharp {
 
     public class Bus : IAddressable {
         private CPU cpu;
+        private PPU.PPU ppu;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
         private byte clock = 0;
 
         //public Run(string romFilepath) { when the emulator accepts roms
-        public void Run() {
-            for(int i = 0; i < 29780 * 3; i++)
+        public void RunFrame() {
+            int frames = ppu.FrameCycleCount();
+            for(int i = 0; i < frames; i++)
             {
                 this.Tick();
             }
         }
 
         public void Tick() {
-            // ppu.Cycle();
+            ppu.Cycle();
             if (clock == 0) cpu.Cycle();
             // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
 
@@ -68,6 +70,11 @@ namespace NesSharp {
         public void Register(CPU cpu)
         {
             this.cpu = cpu;
+        }
+
+        public void Register(PPU.PPU ppu)
+        {
+            this.ppu = ppu;
         }
 
         public byte Read(ushort addr) {
