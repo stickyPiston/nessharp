@@ -85,6 +85,7 @@ namespace NesSharpTests {
                 new Palette(new[] {Color.Green, Color.Red, Color.Blue,}), Palette.BasicColors,
             };
             ppubus.Nametables = new RandomRam();
+            ppubus.Patterntables = new RandomRam();
 
             bus.Register(cpu);
             bus.Register(ppu);
