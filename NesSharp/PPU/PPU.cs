@@ -36,6 +36,10 @@ namespace NesSharp.PPU
         private uint pixel;
         private uint scanline;
 
+        private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
+        private byte[] spriteAttributeLatches = new byte[8];
+        private byte[] spriteXCounters = new byte[8];
+
         public PPU(Texture frameBuffer)
         {
             control = new PPUCTRL();
@@ -58,34 +62,42 @@ namespace NesSharp.PPU
         private byte attrtableByte;
         private ushort patterntableWord;
 
+
+        private byte tempSpriteByte;
+        
+        
+        
+        private byte oamAddr = 0;
+        private byte secOamIndex = 0;
+        private int copySpriteDataCounter;
         public void Cycle()
         {
             if (mask.ShowBackground)
             {
                 if (scanline <= 239)
                 {
-
-                        // ShiftRegs();
+                    // ShiftRegs();
 
                     if (pixel == 0)
                     {
-                        
                     }
                     else if (pixel >= 1 && pixel <= 256)
                     {
-                        int colorIndex = (((PatternTableShift1 << x) & 0x8000) >> 15) | (((PatternTableShift2 << x) & 0x8000) >> 14);
+                        int colorIndex = (((PatternTableShift1 << x) & 0x8000) >> 15) |
+                                         (((PatternTableShift2 << x) & 0x8000) >> 14);
                         int paletteIndex = (((PaletteShift1 << x) & 0x80) >> 7) | (((PaletteShift2 << x) & 0x80) >> 6);
-                        
+
                         // currentFrame.SetPixel(pixel-1, scanline, new Color((byte)pixel, (byte)scanline, 1));
                         currentFrame.SetPixel(pixel - 1, scanline,
                             colorIndex == 0
                                 ? bus.Palettes.background
-                                : bus.Palettes.Backgrounds[paletteIndex].Colors[colorIndex-1]);
+                                : bus.Palettes.Backgrounds[paletteIndex].Colors[colorIndex - 1]);
                         ShiftRegs();
                         DoBackgroundFetches();
                     }
                     else if (pixel == 257)
                     {
+                        // v = (ushort) ((v & ~0x081f) | (t & 0x081f));
                         v = (ushort) ((v & ~0x041f) | (t & 0x041f));
                     }
                     else if (pixel >= 321 && pixel <= 336)
@@ -99,7 +111,6 @@ namespace NesSharp.PPU
                 {
                     if (pixel == 0)
                     {
-                        
                     }
                     else if (pixel >= 1 && pixel <= 256)
                     {
@@ -112,20 +123,64 @@ namespace NesSharp.PPU
                         //hori(v) = hori(t)
                         //Also probably wrong
                         v = (ushort) ((v & ~0x081f) | (t & 0x081f));
+                        // v = (ushort) ((v & ~0x041f) | (t & 0x041f));
                     }
-                    else if(pixel >= 280 && pixel <= 304)
+                    else if (pixel >= 280 && pixel <= 304)
                     {
                         //Also probably wrong
                         v = (ushort) ((v & ~0x77e0) | (t & 0x77e0));
+                        // v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
 
                         // v = t;
-
                     }
                     else if (pixel >= 321 && pixel <= 336)
                     {
                         ShiftRegs();
                         DoBackgroundFetches();
                     }
+                }
+            }
+            
+            if (mask.ShowSprites)
+            {
+                if (scanline <= 239)
+                {
+                    if (pixel == 0)
+                    {
+                    }
+                    else if (pixel <= 64)
+                    {
+                        if (pixel % 2 == 1)
+                        {
+                            tempSpriteByte = 0xff;
+                        }
+                        else
+                        {
+                            secondaryOam.Write((ushort) (pixel / 2 - 1), tempSpriteByte);
+                        }
+                    }
+                    else if (pixel <= 256)
+                    {
+                        if (pixel % 2 == 1)
+                        {
+                            tempSpriteByte = oam.Read(oamAddr);
+                            return;
+                        }
+
+                        if (copySpriteDataCounter > 3)
+                        {
+                            
+                        }
+                        
+                        bool inRange = (scanline - tempSpriteByte) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
+
+                        if (inRange && secOamIndex != 8*4 && oamAddr != 0)
+                        {
+                            copySpriteDataCounter = 3;
+                        }
+
+                    }
+                    
                 }
             }
 
@@ -157,7 +212,7 @@ namespace NesSharp.PPU
                     break;
                 case 7:
                     tempBackgroundByte =
-                        bus.Read((ushort) (control.BackgroundPatterntableAddress + nametableByte + 8+ (v >> 12)));
+                        bus.Read((ushort) (control.BackgroundPatterntableAddress + nametableByte + 8 + (v >> 12)));
                     break;
                 case 0:
                     patterntableWord |= tempBackgroundByte;
@@ -183,14 +238,14 @@ namespace NesSharp.PPU
 
         private void ShiftRegs()
         {
-            PatternTableShift1 = (ushort)(PatternTableShift1 << 1);
-            PatternTableShift2 = (ushort)(PatternTableShift2 << 1);
+            PatternTableShift1 = (ushort) (PatternTableShift1 << 1);
+            PatternTableShift2 = (ushort) (PatternTableShift2 << 1);
 
-            PaletteShift1 = (byte)(PaletteShift1 << 1);
-            PaletteShift2 = (byte)(PaletteShift2 << 1);
+            PaletteShift1 = (byte) (PaletteShift1 << 1);
+            PaletteShift2 = (byte) (PaletteShift2 << 1);
 
-            PaletteShift1 |= (byte)(paletteLatch1 & 1);
-            PaletteShift2 |= (byte)(paletteLatch2 & 1);
+            PaletteShift1 |= (byte) (paletteLatch1 & 1);
+            PaletteShift2 |= (byte) (paletteLatch2 & 1);
         }
 
         private void IncrementPixel()
@@ -272,7 +327,6 @@ namespace NesSharp.PPU
                 }
 
                 v = (ushort) ((v & 0xfc1f) | (y << 5));
-
             }
         }
 
@@ -346,7 +400,6 @@ namespace NesSharp.PPU
                 default:
                     throw new NotImplementedException($"Writing to address 0x{addr:X4} is not implemented");
             }
-            
         }
     }
 }
