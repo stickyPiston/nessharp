@@ -11,9 +11,6 @@ using SFML.Audio;
 namespace NesSharpTests {
 #if !SERVER
   public class WindowTests {
-    [SetUp]
-    public void Setup() { }
-
     [Test(ExpectedResult = 0), Description("SFML window spawns without errors")]
     public uint Graphics() {
       var mode = new VideoMode(500, 500);
@@ -52,12 +49,6 @@ namespace NesSharpTests {
       var sound = new Sound(buffer);
       if (sound == null) return 1;
 
-      sound.Play();
-
-      while (sound.Status == SoundStatus.Playing) {
-        Thread.Sleep(100);
-      }
-      
       return 0;
     }
   }
