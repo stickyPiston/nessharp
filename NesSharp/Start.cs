@@ -74,6 +74,7 @@ namespace NesSharp {
                 int frames = ppu.FrameCycleCount();
                 for (int i = 0; i < 250 * 341; i++) bus.Tick();
                 
+                // Scrolling test
                 ppu.Read(0x2002);
                 ppu.Write(0x2005, x);
                 unchecked
@@ -88,8 +89,6 @@ namespace NesSharp {
 
                 rw.Draw(s);
                 rw.Display();
-
-                // Scrolling test
             }
         }
     }
