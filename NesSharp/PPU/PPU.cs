@@ -274,7 +274,7 @@ namespace NesSharp.PPU
             if (scanline == 241 && pixel == 1)
             {
                 status.VblankStarted = true;
-                frameBuffer.Update(currentFrame);
+                if (frameBuffer != null) frameBuffer.Update(currentFrame);
             }
 
             if (scanline == 261 && pixel == 1)

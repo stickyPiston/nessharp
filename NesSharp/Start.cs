@@ -9,7 +9,7 @@ using NesSharp.PPU;
 using Sprite = SFML.Graphics.Sprite;
 
 namespace NesSharp {
-    class RandomRam : IAddressable
+    public class RandomRam : IAddressable
     {
         public byte[] Bytes;
 
@@ -35,6 +35,7 @@ namespace NesSharp {
     {
         static void Main(string[] args)
         {
+            // Create Bus, CPU, and ControllerPort
             var bus = new Bus();
             var cpu = new CPU(bus);
             var controllerPort = new ControllerPort();
@@ -43,11 +44,17 @@ namespace NesSharp {
             controllerPort.register(controller);
             bus.Register(cpu);
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
-            
+           
+            // Create window
             RenderWindow rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
             rw.Size = new Vector2u(256 * 2, 240 * 2);
-            Texture im = new Texture(256, 240);
 
+            // Create render texture
+            Texture im = new Texture(256, 240);
+            Sprite s = new Sprite(im);
+            s.TextureRect = new IntRect(0, 0, 256, 240);
+
+            // Create PPU
             PPU.PPU ppu = new PPU.PPU(im);
             PPUMemoryBus ppubus = ppu.bus;
             ppubus.Palettes = new PPUPalettes();
@@ -60,15 +67,14 @@ namespace NesSharp {
             ppubus.Nametables = new RandomRam();
             ppubus.Patterntables = new RandomRam();
 
-            bus.Register(ppu);
-
-            byte x = 0; // Scrolling test
-
-            Sprite s = new Sprite(im);
-            s.TextureRect = new IntRect(0, 0, 256, 240);
+            bus.Register(ppu); 
             
+            // Enable rendering
             ppu.Write(0x2001, 0x08);
             
+            byte x = 0; // Scrolling test
+
+            // Run Emulator
             while (true)
             {
                 int frames = ppu.FrameCycleCount();
