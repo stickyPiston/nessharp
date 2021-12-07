@@ -115,21 +115,21 @@ namespace NesSharp.PPU
                     else if (pixel >= 1 && pixel <= 256)
                     {
                         // TODO
-                        // ShiftRegs();
-                        // DoBackgroundFetches();
+                        ShiftRegs();
+                        DoBackgroundFetches();
                     }
                     else if (pixel == 257)
                     {
                         //hori(v) = hori(t)
                         //Also probably wrong
-                        v = (ushort) ((v & ~0x081f) | (t & 0x081f));
-                        // v = (ushort) ((v & ~0x041f) | (t & 0x041f));
+                        // v = (ushort) ((v & ~0x081f) | (t & 0x081f));
+                        v = (ushort) ((v & ~0x041f) | (t & 0x041f));
                     }
                     else if (pixel >= 280 && pixel <= 304)
                     {
                         //Also probably wrong
-                        v = (ushort) ((v & ~0x77e0) | (t & 0x77e0));
-                        // v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
+                        // v = (ushort) ((v & ~0x77e0) | (t & 0x77e0));
+                        v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
 
                         // v = t;
                     }
@@ -250,10 +250,10 @@ namespace NesSharp.PPU
 
         private void IncrementPixel()
         {
-            pixel = (pixel + 1) % 262;
+            pixel = (pixel + 1) % 341;
             if (pixel == 0)
             {
-                scanline = (scanline + 1) % 341;
+                scanline = (scanline + 1) % 262;
 
                 if (scanline == 0)
                 {
@@ -348,6 +348,7 @@ namespace NesSharp.PPU
             {
                 byte val = status.ToByte();
                 status.VblankStarted = false;
+                w = false;
                 return val;
             }
 

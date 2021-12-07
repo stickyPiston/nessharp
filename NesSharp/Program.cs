@@ -37,7 +37,7 @@ namespace NesSharp
 
         static void Main(string[] args)
         {
-            rw = new RenderWindow(new VideoMode(256, 240), "Nes#");
+            rw = new RenderWindow(new VideoMode(256, 240), "Nes#", Styles.Default ^ Styles.Resize);
             rw.Size = new Vector2u(256 * 2, 240 * 2);
             Texture im = new Texture(256, 240);
 
