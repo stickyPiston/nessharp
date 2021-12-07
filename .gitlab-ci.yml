@@ -36,7 +36,7 @@ debug:
    - dotnet tool install dotnet-reportgenerator-globaltool --tool-path tools
   stage: test
   script:
-    - dotnet test --logger "junit" --collect:"XPlat Code Coverage"
+    - dotnet test --logger "junit" --collect:"XPlat Code Coverage" "/p:DefineConstants=SERVER"
     # each reporttype must be a separate line, doesn't work together ; separated
     - ls -ld ${CI_PROJECT_DIR}/**/TestResults/*
     - ./tools/reportgenerator "-reports:${CI_PROJECT_DIR}/**/TestResults/*/coverage.cobertura.xml" "-targetdir:Reports_Coverage" -reportTypes:TextSummary;
@@ -58,7 +58,7 @@ release:
    - dotnet tool install dotnet-reportgenerator-globaltool --tool-path tools
   stage: test
   script:
-    - dotnet test -c Release --logger "junit" --collect:"XPlat Code Coverage"
+    - dotnet test -c Release --logger "junit" --collect:"XPlat Code Coverage" "/p:DefineConstants=SERVER"
     # each reporttype must be a separate line, doesn't work together ; separated
     - ls -ld ${CI_PROJECT_DIR}/**/TestResults/*
     - ./tools/reportgenerator "-reports:${CI_PROJECT_DIR}/**/TestResults/*/coverage.cobertura.xml" "-targetdir:Reports_Coverage" -reportTypes:TextSummary;
