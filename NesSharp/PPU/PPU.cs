@@ -131,17 +131,12 @@ namespace NesSharp.PPU
                     else if (pixel == 257)
                     {
                         //hori(v) = hori(t)
-                        //Also probably wrong
-                        // v = (ushort) ((v & ~0x081f) | (t & 0x081f));
                         v = (ushort) ((v & ~0x041f) | (t & 0x041f));
                     }
                     else if (pixel >= 280 && pixel <= 304)
                     {
-                        //Also probably wrong
-                        // v = (ushort) ((v & ~0x77e0) | (t & 0x77e0));
+                        //vert(v) = vert(t)
                         v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
-
-                        // v = t;
                     }
                     else if (pixel >= 321 && pixel <= 336)
                     {
@@ -179,7 +174,7 @@ namespace NesSharp.PPU
 
                         if (copySpriteDataCounter > 3)
                         {
-                            
+                            secondaryOam.Write(++secOamIndex, tempSpriteByte);
                         }
                         
                         bool inRange = (scanline - tempSpriteByte) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
