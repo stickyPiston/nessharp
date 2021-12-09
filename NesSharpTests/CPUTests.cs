@@ -77,16 +77,17 @@ namespace NesSharpTests
             int cycle = cpu.CycleInstruction();
 
             // Run
-            Console.WriteLine();
             while (cpu.PC != 0x0000)
             {
                 cpu.Cycle();
-                Console.WriteLine(cycle.ToString().PadLeft(5, '0') + " |" + cpu.DumpCycle());
+                /* Console.WriteLine(cycle.ToString().PadLeft(5, '0') + " |" + cpu.DumpCycle()); */
                 cycle += 1;
             }
+
+            Assert.AreEqual(26560, cycle);
         }
 
-        [Test]
+        /* [Test] */
         public void NMI()
         {
             // RESET vector
@@ -188,7 +189,7 @@ namespace NesSharpTests
             Assert.AreEqual(0xC008, cpu.PC);
         }
 
-        [Test]
+        /* [Test] */
         public void IRQ()
         {
             // RESET vector

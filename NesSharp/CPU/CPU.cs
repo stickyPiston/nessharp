@@ -206,11 +206,11 @@ namespace NesSharp
             // Get next instruction
             if (instr.Cycles.Length <= cycle)
             {
-                if (pending != null)
+                if (previous != null)
                 {
                     // Poll next interrupt
                     cycle = 0;
-                    SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
+                    SetInstruction(previous == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                 }
                 else
                 {

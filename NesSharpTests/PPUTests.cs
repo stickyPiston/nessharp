@@ -56,12 +56,10 @@ namespace NesSharpTests {
 
         public void Run() {
             bool started = false;
-            int c = 0;
             while (true) {
                 bus.Tick();
                 bus.Tick();
                 bus.Tick();
-                // Console.WriteLine(cpu.DumpCycle());
                 if (!started && ram.Read(0x6000) == 0x80) {
                     started = true;
                 }
@@ -69,8 +67,10 @@ namespace NesSharpTests {
                     started = false;
                     break;
                 }
-                // if (c >= 200000) break;
-                // c++;
+                if (cpu.instr.Illegal) {
+                    Assert.Fail();
+                    break;
+                }
             }
             
 

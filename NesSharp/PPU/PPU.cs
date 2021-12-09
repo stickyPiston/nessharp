@@ -42,8 +42,6 @@ namespace NesSharp.PPU
         private byte[] spriteAttributeLatches = new byte[8];
         private byte[] spriteXCounters = new byte[8];
 
-        private bool NMINextCycle;
-        
         public PPU(Texture frameBuffer, Bus mainBus)
         {
             MainBus = mainBus;
@@ -89,11 +87,6 @@ namespace NesSharp.PPU
 
         public void Cycle()
         {
-            if (NMINextCycle)
-            {
-                NMINextCycle = false;
-                MainBus.PullNMI();
-            }
             if (mask.ShowBackground)
             {
                 if (scanline <= 239)
@@ -279,6 +272,7 @@ namespace NesSharp.PPU
             if (scanline == 241 && pixel == 1)
             {
                 status.VblankStarted = true;
+                Console.WriteLine("test");
                 if (control.GenNMI_VBL) MainBus.PullNMI();
                 if (frameBuffer != null) frameBuffer.Update(currentFrame);
             }
@@ -388,7 +382,7 @@ namespace NesSharp.PPU
                     t = (ushort) ((t & 0x73ff) | ((data & 0x03) << 10));
                     bool old = control.GenNMI_VBL;
                     control.FromByte(data);
-                    if (!old && control.GenNMI_VBL && status.VblankStarted) NMINextCycle = true;
+                    if (!old && control.GenNMI_VBL && status.VblankStarted) MainBus.PullNMI();
 
                     break;
                 case 0x2001:
