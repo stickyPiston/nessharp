@@ -13,6 +13,26 @@ namespace NesSharp {
         }
     };
 
+    public class Repeater : IAddressable {
+        private IAddressable parent;
+        private ushort start;
+        private ushort repeat;
+
+        public Repeater(IAddressable parent, ushort start, ushort repeat) {
+            this.parent = parent;
+            this.start = start;
+            this.repeat = repeat;
+        }
+
+        public byte Read(ushort addr) {
+            return parent.Read((ushort)((addr - start) % repeat + start));
+        }
+
+        public void Write(ushort addr, byte data) {
+            parent.Write((ushort)((addr - start) % repeat + start), data);
+        }
+    }
+
     public class Bus : IAddressable {
         private CPU cpu;
         private PPU.PPU ppu;

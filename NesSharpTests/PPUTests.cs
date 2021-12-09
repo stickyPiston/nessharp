@@ -1,0 +1,91 @@
+using NesSharp;
+using NesSharp.PPU;
+using SFML.Graphics;
+using NUnit.Framework;
+using System.IO;
+using System;
+
+using Range = NesSharp.Range;
+
+namespace NesSharpTests {
+    public class PPUTests {
+        Bus bus;
+        CPU cpu;
+        RAM ram;
+        PPU ppu;
+    
+        [SetUp]
+        public void Setup() {
+            bus = new Bus();
+
+            ram = new RAM(0x10000);
+            bus.Register(ram, new Range[] { new Range(0x0000, 0x07FF), new Range(0x6000, 0xFFFF) });
+
+            cpu = new CPU(bus);
+            bus.Register(cpu);
+
+            PPU ppu = new PPU(null, bus);
+            PPUMemoryBus ppubus = ppu.bus;
+            ppubus.Palettes = new PPUPalettes();
+            ppubus.Palettes.Backgrounds = new[]
+            {
+                new Palette(new[] {Color.Red, Color.White, Color.Yellow}),
+                new Palette(new[] {Color.Magenta, Color.Cyan, Color.Red,}),
+                new Palette(new[] {Color.Green, Color.Red, Color.Blue,}), Palette.BasicColors,
+            };
+            ppubus.Nametables = new RandomRam();
+            ppubus.Patterntables = new RandomRam();
+            bus.Register(ppu);
+            bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3FFF) });
+        }
+
+        public void ReadNES(string file) {
+            byte[] bytes = File.ReadAllBytes("../../../roms/ppu_vbl_nmi/rom_singles/" + file);
+            for (int i = 0; i + 0x8000 < 65536 && i + 16 < bytes.Length; i++) {
+                bus.Write((ushort) (i + 0x8000), bytes[i + 16]);
+            }
+        }
+
+        public void ReadOutput() {
+            ushort read = 0x6004;
+            while (ram.Read(read) != 0 && read < 0x8000) {
+                Console.Write((char) ram.Read(read));
+                read += 1;
+            }
+        }
+
+        public void Run() {
+            bool started = false;
+
+            while (true) {
+                bus.Tick();
+                bus.Tick();
+                bus.Tick();
+
+                if (!started && ram.Read(0x6000) == 0x80) {
+                    started = true;
+                }
+                else if (started && ram.Read(0x6000) != 0x80) {
+                    started = false;
+                    break;
+                }
+            }
+
+            ReadOutput();
+        }
+
+        [Test]
+        public void VblBasics() {
+            ReadNES("01-vbl_basics.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+
+        [Test]
+        public void VblSetTime() {
+            ReadNES("02-vbl_set_time.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+    }
+}

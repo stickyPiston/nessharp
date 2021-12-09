@@ -383,9 +383,11 @@ namespace NesSharp.PPU
                 case 0x2002:
                     break;
                 case 0x2003:
-                    throw new NotImplementedException();
+                    /* throw new NotImplementedException(); */
+                    break;
                 case 0x2004:
-                    throw new NotImplementedException();
+                    /* throw new NotImplementedException(); */
+                    break;
                 case 0x2005:
                     if (!w)
                     {
@@ -413,7 +415,8 @@ namespace NesSharp.PPU
                     w = !w;
                     break;
                 default:
-                    throw new NotImplementedException($"Writing to address 0x{addr:X4} is not implemented");
+                    /* throw new NotImplementedException($"Writing to address 0x{addr:X4} is not implemented"); */
+                    break;
             }
         }
     }
