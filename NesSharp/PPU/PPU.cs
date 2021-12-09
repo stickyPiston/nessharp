@@ -272,7 +272,7 @@ namespace NesSharp.PPU
             if (scanline == 241 && pixel == 1)
             {
                 status.VblankStarted = true;
-                if (control.GenNMI_VBL) MainBus.PullNMI();
+                if (control.GenNMI_VBL) MainBus.LowNMI();
                 if (frameBuffer != null) frameBuffer.Update(currentFrame);
             }
             // On pixel 2 because read on 1 has to still be true
@@ -361,8 +361,8 @@ namespace NesSharp.PPU
                 
                 byte val = status.ToByte();
                 
-                
                 status.VblankStarted = false;
+                MainBus.HighNMI();
                 w = false;
                 return val;
             }
@@ -383,7 +383,7 @@ namespace NesSharp.PPU
                     t = (ushort) ((t & 0x73ff) | ((data & 0x03) << 10));
                     bool old = control.GenNMI_VBL;
                     control.FromByte(data);
-                    if (!old && control.GenNMI_VBL && status.VblankStarted) MainBus.PullNMI();
+                    if (!old && control.GenNMI_VBL && status.VblankStarted) MainBus.LowNMI();
 
                     break;
                 case 0x2001:

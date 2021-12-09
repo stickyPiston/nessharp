@@ -62,9 +62,15 @@ namespace NesSharp {
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>
-        public void PullNMI()
+        public void LowNMI()
         {
-            cpu.PullNMI();
+            cpu.LowNMI();
+        }
+
+        /// <summary>If the NMI is set high before the CPU could read the NMI status, the NMI is ignored</summary>
+        public void HighNMI()
+        {
+            cpu.HighNMI();
         }
 
         /// <summary>Keeps the IRQ line from the sender to the CPU high, until LowIRQ is called.</summary>

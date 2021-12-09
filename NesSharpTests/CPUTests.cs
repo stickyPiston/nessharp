@@ -125,7 +125,7 @@ namespace NesSharpTests
             cpu.Cycle(); // BCS
 
             // NMI should be delayed because of a non-page-crossing branch
-            cpu.PullNMI();
+            cpu.LowNMI();
             cpu.Cycle(); // BCS
             cpu.Cycle(); // BCC
             Assert.AreEqual("BCC rel", cpu.instr.Name);
@@ -152,7 +152,7 @@ namespace NesSharpTests
             // NMI hijack
             cpu.Cycle(); // BRK
             cpu.Cycle(); // BRK
-            cpu.PullNMI();
+            cpu.LowNMI();
             cpu.Cycle(); // BRK
             Assert.AreEqual("BRK impl", cpu.instr.Name);
             cpu.Cycle(); // NMI
@@ -171,7 +171,7 @@ namespace NesSharpTests
             cpu.Cycle(); // BRK
             cpu.Cycle(); // BRK
             cpu.Cycle(); // BRK
-            cpu.PullNMI();
+            cpu.LowNMI();
             cpu.Cycle(); // BRK
             Assert.AreEqual("BRK impl", cpu.instr.Name);
             cpu.Cycle(); // BRK

@@ -141,9 +141,14 @@ namespace NesSharp
             this.cycle = 0;
         }
 
-        public void PullNMI()
+        public void LowNMI()
         {
             incomingNMI = true;
+        }
+
+        public void HighNMI()
+        {
+            incomingNMI = false;
         }
 
         public void HighIRQ(object sender)
