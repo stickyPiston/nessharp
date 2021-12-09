@@ -75,7 +75,7 @@ namespace NesSharpTests {
             
             var cpu = new CPU(bus);
 
-            PPU ppu = new PPU(null);
+            PPU ppu = new PPU(null, bus);
             PPUMemoryBus ppubus = ppu.bus;
             ppubus.Palettes = new PPUPalettes();
             ppubus.Palettes.Backgrounds = new[]

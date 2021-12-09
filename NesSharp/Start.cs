@@ -55,7 +55,7 @@ namespace NesSharp {
             s.TextureRect = new IntRect(0, 0, 256, 240);
 
             // Create PPU
-            PPU.PPU ppu = new PPU.PPU(im);
+            PPU.PPU ppu = new PPU.PPU(im, bus);
             PPUMemoryBus ppubus = ppu.bus;
             ppubus.Palettes = new PPUPalettes();
             ppubus.Palettes.Backgrounds = new[]
