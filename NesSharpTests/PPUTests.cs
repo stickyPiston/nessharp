@@ -118,5 +118,33 @@ namespace NesSharpTests {
             Run();
             Assert.AreEqual(0, ram.Read(0x6000));
         }
+        
+        [Test]
+        public void NmiOnTiming() {
+            ReadNES("07-nmi_on_timing.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+        
+        [Test]
+        public void NmiOffTiming() {
+            ReadNES("08-nmi_off_timing.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+        
+        [Test]
+        public void EvenOddFrames() {
+            ReadNES("09-even_odd_frames.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+        
+        [Test]
+        public void EvenOddTiming() {
+            ReadNES("10-even_odd_timing.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
     }
 }
