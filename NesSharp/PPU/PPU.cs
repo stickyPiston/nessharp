@@ -7,6 +7,8 @@ namespace NesSharp.PPU
 {
     public class PPU : IClockable, IAddressable
     {
+        private Bus MainBus;
+        
         private Image currentFrame;
         private Texture frameBuffer;
 
@@ -40,8 +42,9 @@ namespace NesSharp.PPU
         private byte[] spriteAttributeLatches = new byte[8];
         private byte[] spriteXCounters = new byte[8];
 
-        public PPU(Texture frameBuffer)
+        public PPU(Texture frameBuffer, Bus mainBus)
         {
+            MainBus = mainBus;
             control = new PPUCTRL();
             mask = new PPUMASK();
             status = new PPUSTATUS
@@ -269,6 +272,7 @@ namespace NesSharp.PPU
             if (scanline == 241 && pixel == 1)
             {
                 status.VblankStarted = true;
+                if (control.GenNMI_VBL) MainBus.PullNMI();
                 if (frameBuffer != null) frameBuffer.Update(currentFrame);
             }
 
@@ -368,7 +372,10 @@ namespace NesSharp.PPU
             {
                 case 0x2000:
                     t = (ushort) ((t & 0x73ff) | ((data & 0x03) << 10));
+                    bool old = control.GenNMI_VBL;
                     control.FromByte(data);
+                    if (!old && control.GenNMI_VBL && status.VblankStarted) MainBus.PullNMI();
+
                     break;
                 case 0x2001:
                     mask.FromByte(data);
@@ -434,7 +441,13 @@ struct PPUCTRL
 
     public void FromByte(byte data)
     {
-        throw new NotImplementedException();
+        BaseNametableAddress = (ushort) (0x2000 + 0x400 * (data & 0b11));
+        VramAddrInc = (ushort) (1 + ((data & 0b100) >> 2) * 31);
+        SpritePatterntableAddress8x8 = (ushort) ((data & 0b1000) * 0x0200);
+        BackgroundPatterntableAddress = (ushort) ((data & 0b10000) * 0x0100);
+        SpriteSize = (data & 0b100000) == 0 ? SpriteSize._8x8 : SpriteSize._8x16;
+        //PPU master/slave select not implemented
+        GenNMI_VBL = (data & 0x80) != 0;
     }
 }
 
