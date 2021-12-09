@@ -56,12 +56,12 @@ namespace NesSharpTests {
 
         public void Run() {
             bool started = false;
-
+            int c = 0;
             while (true) {
                 bus.Tick();
                 bus.Tick();
                 bus.Tick();
-
+                // Console.WriteLine(cpu.DumpCycle());
                 if (!started && ram.Read(0x6000) == 0x80) {
                     started = true;
                 }
@@ -69,7 +69,10 @@ namespace NesSharpTests {
                     started = false;
                     break;
                 }
+                // if (c >= 200000) break;
+                // c++;
             }
+            
 
             ReadOutput();
         }
@@ -84,6 +87,20 @@ namespace NesSharpTests {
         [Test]
         public void VblSetTime() {
             ReadNES("02-vbl_set_time.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+        
+        [Test]
+        public void VblClearTime() {
+            ReadNES("03-vbl_clear_time.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+        
+        [Test]
+        public void NmiControl() {
+            ReadNES("04-nmi_control.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000));
         }

@@ -8,7 +8,7 @@ namespace NesSharp.PPU
     public class PPU : IClockable, IAddressable
     {
         private Bus MainBus;
-        
+
         private Image currentFrame;
         private Texture frameBuffer;
 
@@ -42,6 +42,8 @@ namespace NesSharp.PPU
         private byte[] spriteAttributeLatches = new byte[8];
         private byte[] spriteXCounters = new byte[8];
 
+        private bool NMINextCycle;
+        
         public PPU(Texture frameBuffer, Bus mainBus)
         {
             MainBus = mainBus;
@@ -67,24 +69,31 @@ namespace NesSharp.PPU
 
 
         private byte tempSpriteByte;
-        
-        
-        
+
+
         private byte oamAddr = 0;
         private byte secOamIndex = 0;
         private int copySpriteDataCounter;
 
         public int FrameCycleCount()
         {
-            if ((mask.ShowBackground || mask.ShowSprites) && ODDFRAME) {
+            if ((mask.ShowBackground || mask.ShowSprites) && ODDFRAME)
+            {
                 return 262 * 341 - 1;
-            } else {
+            }
+            else
+            {
                 return 262 * 341;
             }
         }
 
         public void Cycle()
         {
+            if (NMINextCycle)
+            {
+                NMINextCycle = false;
+                MainBus.PullNMI();
+            }
             if (mask.ShowBackground)
             {
                 if (scanline <= 239)
@@ -148,7 +157,7 @@ namespace NesSharp.PPU
                     }
                 }
             }
-            
+
             if (mask.ShowSprites)
             {
                 if (scanline <= 239)
@@ -179,16 +188,14 @@ namespace NesSharp.PPU
                         {
                             secondaryOam.Write(++secOamIndex, tempSpriteByte);
                         }
-                        
+
                         bool inRange = (scanline - tempSpriteByte) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
 
-                        if (inRange && secOamIndex != 8*4 && oamAddr != 0)
+                        if (inRange && secOamIndex != 8 * 4 && oamAddr != 0)
                         {
                             copySpriteDataCounter = 3;
                         }
-
                     }
-                    
                 }
             }
 
@@ -275,8 +282,8 @@ namespace NesSharp.PPU
                 if (control.GenNMI_VBL) MainBus.PullNMI();
                 if (frameBuffer != null) frameBuffer.Update(currentFrame);
             }
-
-            if (scanline == 261 && pixel == 1)
+            // On pixel 2 because read on 1 has to still be true
+            if (scanline == 261 && pixel == 2)
             {
                 status.VblankStarted = false;
                 status.Sprite0Hit = false;
@@ -357,13 +364,20 @@ namespace NesSharp.PPU
         {
             if (addr == 0x2002)
             {
+                if (scanline == 241 && pixel == 1) status.VblankStarted = false;
+
                 byte val = status.ToByte();
                 status.VblankStarted = false;
                 w = false;
                 return val;
             }
 
-            throw new NotImplementedException();
+            if (addr == 0x2006)
+            {
+                return 0;
+            }
+
+            throw new NotImplementedException($"Could not read {addr:x4}");
         }
 
         public void Write(ushort addr, byte data)
@@ -374,7 +388,7 @@ namespace NesSharp.PPU
                     t = (ushort) ((t & 0x73ff) | ((data & 0x03) << 10));
                     bool old = control.GenNMI_VBL;
                     control.FromByte(data);
-                    if (!old && control.GenNMI_VBL && status.VblankStarted) MainBus.PullNMI();
+                    if (!old && control.GenNMI_VBL && status.VblankStarted) NMINextCycle = true;
 
                     break;
                 case 0x2001:
