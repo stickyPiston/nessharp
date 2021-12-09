@@ -104,5 +104,19 @@ namespace NesSharpTests {
             Run();
             Assert.AreEqual(0, ram.Read(0x6000));
         }
+        
+        [Test]
+        public void NmiTiming() {
+            ReadNES("05-nmi_timing.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
+        
+        [Test]
+        public void Suppression() {
+            ReadNES("06-suppression.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000));
+        }
     }
 }

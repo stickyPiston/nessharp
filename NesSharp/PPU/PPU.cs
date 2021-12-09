@@ -272,7 +272,6 @@ namespace NesSharp.PPU
             if (scanline == 241 && pixel == 1)
             {
                 status.VblankStarted = true;
-                Console.WriteLine("test");
                 if (control.GenNMI_VBL) MainBus.PullNMI();
                 if (frameBuffer != null) frameBuffer.Update(currentFrame);
             }
@@ -359,8 +358,10 @@ namespace NesSharp.PPU
             if (addr == 0x2002)
             {
                 if (scanline == 241 && pixel == 1) status.VblankStarted = false;
-
+                
                 byte val = status.ToByte();
+                
+                
                 status.VblankStarted = false;
                 w = false;
                 return val;
