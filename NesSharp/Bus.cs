@@ -51,8 +51,8 @@ namespace NesSharp {
         }
 
         public void Tick() {
-            if (clock == 0) cpu.Cycle();
             ppu.Cycle();
+            if (clock == 0) cpu.Cycle();
             // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
 
             // TODO: OAM DMA

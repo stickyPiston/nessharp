@@ -37,6 +37,7 @@ namespace NesSharp.PPU
         private bool ODDFRAME;
         private uint pixel;
         private uint scanline;
+        private bool preventVbl;
 
         private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
         private byte[] spriteAttributeLatches = new byte[8];
@@ -256,6 +257,20 @@ namespace NesSharp.PPU
             PaletteShift2 |= (byte) (paletteLatch2 & 1);
         }
 
+        private void StartVBlank() {
+            status.VblankStarted = true;
+            if (control.GenNMI_VBL) MainBus.LowNMI();
+            else MainBus.HighNMI();
+            if (frameBuffer != null) frameBuffer.Update(currentFrame);
+        }
+
+        private void EndVBlank() {
+            status.VblankStarted = false;
+            status.Sprite0Hit = false;
+            status.SpriteOverflow = false;
+            MainBus.HighNMI();
+        }
+
         private void IncrementPixel()
         {
             pixel = (pixel + 1) % 341;
@@ -271,26 +286,19 @@ namespace NesSharp.PPU
 
             if (scanline == 241 && pixel == 1)
             {
-                status.VblankStarted = true;
-                if (control.GenNMI_VBL) MainBus.LowNMI();
-                if (frameBuffer != null) frameBuffer.Update(currentFrame);
+                StartVBlank();
             }
-            // On pixel 2 because read on 1 has to still be true
+            // Pixel 2 so that the CPU can still read the correct value
             if (scanline == 261 && pixel == 2)
             {
-                status.VblankStarted = false;
-                status.Sprite0Hit = false;
-                status.SpriteOverflow = false;
-                MainBus.HighNMI();
+                EndVBlank();
             }
 
             if (mask.ShowBackground || mask.ShowSprites)
             {
-                if (scanline == 261 && pixel == 340 && ODDFRAME)
+                if (scanline == 261 && pixel == 339 && ODDFRAME)
                 {
-                    pixel = 0;
-                    scanline = 0;
-                    ODDFRAME = !ODDFRAME;
+                    pixel += 1;
                 }
             }
         }
@@ -384,7 +392,8 @@ namespace NesSharp.PPU
                     t = (ushort) ((t & 0x73ff) | ((data & 0x03) << 10));
                     bool old = control.GenNMI_VBL;
                     control.FromByte(data);
-                    if (!old && control.GenNMI_VBL && status.VblankStarted) MainBus.LowNMI();
+                    if (!old && control.GenNMI_VBL && status.VblankStarted && (scanline < 261 || pixel == 0)) MainBus.LowNMI();
+                    else MainBus.HighNMI();
 
                     break;
                 case 0x2001:
