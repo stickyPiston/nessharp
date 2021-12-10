@@ -14,10 +14,10 @@ namespace NesSharp
         /// Otherwise it does nothing and returns false.</summary>
         private bool CheckPending(bool irq = true)
         {
-            if (previous != null && (irq || previous == HardwareInterrupt.NMI))
+            if (prevpolled != null && (irq || prevpolled == HardwareInterrupt.NMI))
             {
                 // Poll next interrupt
-                SetInstruction(previous == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
+                SetInstruction(prevpolled == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                 return true;
             }
             return false;
@@ -124,7 +124,7 @@ namespace NesSharp
             } else {
                 // Next instruction
                 // "a taken non-page-crossing branch ignores IRQ/NMI during its last clock, so that next instruction executes before the IRQ"
-                cpu.NextInstruction(cpu.previous != null);
+                cpu.NextInstruction(cpu.prevprevpolled != null);
             }
 
         };
@@ -341,9 +341,9 @@ namespace NesSharp
                 // Interrupt hijack (all hardware interrupts)
                 if (hijack) {
                     cpu.CheckPending(true);
-                    if (cpu.pending == HardwareInterrupt.NMI) {
+                    if (cpu.polled == HardwareInterrupt.NMI) {
                         // Reset NMI on handle
-                        cpu.pending = null;
+                        cpu.polled = null;
                     }
                 }
 
@@ -356,9 +356,9 @@ namespace NesSharp
                 // Interrupt hijack (only NMI)
                 if (hijack) {
                     cpu.CheckPending(false);
-                    if (cpu.pending == HardwareInterrupt.NMI) {
+                    if (cpu.polled == HardwareInterrupt.NMI) {
                         // Reset NMI on handle
-                        cpu.pending = null;
+                        cpu.polled = null;
                     }
                 }
 

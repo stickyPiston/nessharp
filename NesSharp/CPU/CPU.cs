@@ -119,10 +119,13 @@ namespace NesSharp
         }
 
         private ISet<object> incomingIRQ = new HashSet<object>();
-        private bool incomingNMI;
 
-        public HardwareInterrupt? pending  { get; private set; } // this cycle
-        public HardwareInterrupt? previous { get; private set; } // previous cycle
+        private bool incomingNMI;
+        private bool prevIncomingNMI;
+
+        public HardwareInterrupt? polled { get; private set; } // next cycle
+        public HardwareInterrupt? prevpolled { get; private set; } // this cycle
+        public HardwareInterrupt? prevprevpolled { get; private set; } // last cycle
 
         public CPU(IAddressable bus)
         {
@@ -167,26 +170,20 @@ namespace NesSharp
         }
 
         private void CycleEnd() {
-            previous = pending;
+            prevprevpolled = prevpolled;
+            prevpolled = polled;
 
-            // NMI stays pending until it is handled
-            if (pending != HardwareInterrupt.NMI)
-            {
-                // An incoming NMI interrupt has priority
-                if (incomingNMI)
-                {
-                    pending = HardwareInterrupt.NMI;
-                    incomingNMI = false;
-                }
-                else if (incomingIRQ.Count > 0 && P.I == 0)
-                {
-                    pending = HardwareInterrupt.IRQ;
-                }
-                else
-                {
-                    pending = null;
+            if (polled != HardwareInterrupt.NMI) {
+                if (!prevIncomingNMI && incomingNMI) {
+                    polled = HardwareInterrupt.NMI;
+                } else if (incomingIRQ.Count > 0 && P.I == 0) {
+                    polled = HardwareInterrupt.IRQ;
+                } else {
+                    polled = null;
                 }
             }
+
+            prevIncomingNMI = incomingNMI;
         }
 
         public int CycleInstruction() {
@@ -211,11 +208,11 @@ namespace NesSharp
             // Get next instruction
             if (instr.Cycles.Length <= cycle)
             {
-                if (previous != null)
+                if (prevpolled != null)
                 {
                     // Poll next interrupt
                     cycle = 0;
-                    SetInstruction(previous == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
+                    SetInstruction(prevpolled == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                 }
                 else
                 {

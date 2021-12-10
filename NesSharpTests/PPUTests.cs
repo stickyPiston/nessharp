@@ -57,10 +57,13 @@ namespace NesSharpTests {
         public void Run() {
             bool started = false;
 
+            int cycle = 0;
+
             while (true) {
                 bus.Tick();
                 bus.Tick();
                 bus.Tick();
+                /* Console.WriteLine(cpu.DumpCycle()); */
                 if (!started && ram.Read(0x6000) == 0x80) {
                     started = true;
                 }
@@ -68,6 +71,17 @@ namespace NesSharpTests {
                     break;
                 }
                 if (cpu.instr.Illegal) {
+                    Console.WriteLine(cpu.DumpCycle());
+                    Assert.Fail();
+                    break;
+                }
+                if (cpu.instr.Name != "RESET" && cpu.PC < 0x8000) {
+                    Console.WriteLine(cpu.DumpCycle());
+                    Assert.Fail();
+                    break;
+                }
+                if (cycle++ > 10_000_000) {
+                    Console.WriteLine(cpu.DumpCycle());
                     Assert.Fail();
                     break;
                 }
