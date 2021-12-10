@@ -391,7 +391,6 @@ namespace NesSharp.PPU
                     t = (ushort) ((t & 0x73ff) | ((data & 0x03) << 10));
                     bool old = control.GenNMI_VBL;
                     control.FromByte(data);
-                    if (scanline == 261 && pixel == 1) EndVBlank();
 
                     // On scanline 261 pixel 1 no NMI should occur
                     if (!old && control.GenNMI_VBL && status.VblankStarted && (scanline < 261 || pixel == 0)) MainBus.LowNMI();
