@@ -56,6 +56,7 @@ namespace NesSharpTests {
 
         public void Run() {
             bool started = false;
+
             while (true) {
                 bus.Tick();
                 bus.Tick();
@@ -64,7 +65,6 @@ namespace NesSharpTests {
                     started = true;
                 }
                 else if (started && ram.Read(0x6000) != 0x80) {
-                    started = false;
                     break;
                 }
                 if (cpu.instr.Illegal) {
@@ -73,7 +73,6 @@ namespace NesSharpTests {
                 }
             }
             
-
             ReadOutput();
         }
 

@@ -281,6 +281,7 @@ namespace NesSharp.PPU
                 status.VblankStarted = false;
                 status.Sprite0Hit = false;
                 status.SpriteOverflow = false;
+                MainBus.HighNMI();
             }
 
             if (mask.ShowBackground || mask.ShowSprites)
