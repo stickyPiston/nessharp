@@ -37,7 +37,6 @@ namespace NesSharp.PPU
         private bool ODDFRAME;
         private uint pixel;
         private uint scanline;
-        private bool preventVbl;
 
         private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
         private byte[] spriteAttributeLatches = new byte[8];
@@ -392,6 +391,9 @@ namespace NesSharp.PPU
                     t = (ushort) ((t & 0x73ff) | ((data & 0x03) << 10));
                     bool old = control.GenNMI_VBL;
                     control.FromByte(data);
+                    if (scanline == 261 && pixel == 1) EndVBlank();
+
+                    // On scanline 261 pixel 1 no NMI should occur
                     if (!old && control.GenNMI_VBL && status.VblankStarted && (scanline < 261 || pixel == 0)) MainBus.LowNMI();
                     else MainBus.HighNMI();
 
