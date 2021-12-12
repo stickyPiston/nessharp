@@ -2,34 +2,25 @@ using System;
 
 namespace NesSharp
 {
-    public class CPU2A03
-    {       
-            public void CpuWrite(UInt16 addr, sbyte data)
-            {
-
-            }
-            
-            
-            //cpuread method
-            /*(public int CpuRead(ushort addr)
-            {
-            }*/
-    }
-
-    public class ApuClock
-    {
-
-    }
 
     //sequencer influences the frequency of our soundwaves
     //resulting in different pitches
     public class Sequencer
     {
+
         public uint sequence = 0x00000000;
         public uint new_sequence = 0x00000000;
-        private UInt16 counter = 0x0000;
-        private UInt16 reload = 0x0000;
+        public ushort counter = 0x0000;
+        public ushort reload = 0x0000;
         public sbyte output = 0x00;
+
+        public Sequencer(uint z, ushort x)
+        {
+            reload = x;
+            counter = x;
+            sequence = z;
+            new_sequence = z;
+        }
         public int Clock(bool active, Func<uint, uint> funcTimer)
 		{
 			if (active)
@@ -48,6 +39,18 @@ namespace NesSharp
 
     public class Envelope
     {
+        public bool start = false;
+        public bool disable = false;
+        UInt16 divider_counter = 0;
+        UInt16 decay_counter = 0;
+        public UInt16 volume = 0;
+        UInt16 output = 0;
+        public Envelope(bool x, ushort z)
+        {
+            start = x;
+            disable = x;
+            volume = z;
+        }
         void Apuclock(bool loop)
         {
             if (!start)
@@ -80,26 +83,29 @@ namespace NesSharp
             else
                 output = decay_counter;
         }
-
-        bool start = false;
-        bool disable = false;
-        UInt16 divider_counter = 0;
-        UInt16 decay_counter = 0;
-        UInt16 volume = 0;
-        UInt16 output = 0;
     }
 
     public class Sweeper
     {
         public bool enabled = true;
-        private bool down = false;
-        private bool reload = false;
+        public bool down = false;
+        public bool reload = false;
         public sbyte divider = 0x00;
         public bool negate = false;
         public sbyte shift = 0x00;
         private sbyte timer = 0x00;
         private ushort change = 0;
         public bool mute = false;
+
+        public Sweeper(bool x, sbyte z)
+        {
+            enabled = x;
+            down = x;
+            reload = x;
+            divider = z;
+            shift = z;
+
+        }
 
         //tracks
         public void PpuClock(ushort target)
@@ -144,7 +150,11 @@ namespace NesSharp
     }
     public class Lengthcounter
     {
-        sbyte counter = 0x00;
+        public sbyte counter = 0x00;
+        public Lengthcounter(sbyte z)
+        {
+            counter = z;
+        }
         sbyte Clock(bool enable, bool pause)
         {
             if (!enable)
@@ -159,11 +169,16 @@ namespace NesSharp
     //oscillates the soundwaves resulting in smoother sounds
     public class Oscillator
     {
+        public double dutycycle = 0;
         double frequency = 0;
-        double dutycycle = 0;
         double amplitude = 1;
         double pi = 3.141592653;
         double harmonics = 20;
+
+        public Oscillator(uint z)
+        {
+            dutycycle = z;
+        }
 
         double Sample(double t)
         {
