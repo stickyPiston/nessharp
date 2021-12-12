@@ -2,92 +2,107 @@ using System;
 
 namespace NesSharp
 {
-    class sequencer
+    public class CPU2A03
+    {       
+            public void CpuWrite(UInt16 addr, sbyte data)
+            {
+
+            }
+            
+            
+            //cpuread method
+            /*(public int CpuRead(ushort addr)
+            {
+            }*/
+    }
+
+    public class ApuClock
     {
-        public byte sequence = 0x00000000;
-        public byte new_sequence = 0x00000000;
-        private UInt16 timer = 0x0000;
-        private byte reload = 0x0000;
-        public byte output = 0x00;
-        public int Clock(bool bEnable, Func<uint, uint> funcManip)
+
+    }
+
+    //sequencer influences the frequency of our soundwaves
+    //resulting in different pitches
+    public class Sequencer
+    {
+        public uint sequence = 0x00000000;
+        public uint new_sequence = 0x00000000;
+        private UInt16 counter = 0x0000;
+        private UInt16 reload = 0x0000;
+        public sbyte output = 0x00;
+        public int Clock(bool active, Func<uint, uint> funcTimer)
 		{
-			if (bEnable)
-			{
-				timer--;
-				if (timer == 0xFFFF)
-				{
-					timer = reload;
-					funcManip(sequence);
-                    output = (byte)(sequence & 0x00000001);
+			if (active)
+			{   
+				counter--;
+				if (counter == 0xFFFF)
+				{   
+                    counter = reload;
+					funcTimer(sequence);
+                    output = (sbyte)(sequence & 0x00000001);
 				}
             }
         return output;
 		}
     }
 
-    class envelope
+    public class Envelope
     {
-        void apuclock(bool bLoop)
+        void Apuclock(bool loop)
         {
             if (!start)
             {
-                if (divider_count == 0)
+                if (divider_counter == 0)
                 {
-                    divider_count = volume;
-
-                    if (decay_count == 0)
+                    divider_counter = volume;
+                    if (decay_counter == 0)
                     {
-                        if (bLoop)
+                        if (loop)
                         {
-                            decay_count = 15;
+                            decay_counter = 15;
                         }
-
                     }
                     else
-                        decay_count--;
+                        decay_counter--;
                 }
                 else
-                    divider_count--;
+                    divider_counter--;
             }
             else
             {
                 start = false;
-                decay_count = 15;
-                divider_count = volume;
+                divider_counter = volume;
+                decay_counter = 15;
             }
 
             if (disable)
-            {
                 output = volume;
-            }
             else
-            {
-                output = decay_count;
-            }
+                output = decay_counter;
         }
 
         bool start = false;
         bool disable = false;
-        UInt16 divider_count = 0;
+        UInt16 divider_counter = 0;
+        UInt16 decay_counter = 0;
         UInt16 volume = 0;
         UInt16 output = 0;
-        UInt16 decay_count = 0;
     }
-    class Sweeper
+
+    public class Sweeper
     {
         public bool enabled = true;
         private bool down = false;
         private bool reload = false;
-        //divider = period
-        public byte divider = 0x00;
+        public sbyte divider = 0x00;
         public bool negate = false;
-        public byte shift = 0x00;
-        private byte timer = 0x00;
+        public sbyte shift = 0x00;
+        private sbyte timer = 0x00;
         private ushort change = 0;
         public bool mute = false;
 
         //tracks
-        public void ppuClock(ushort target)
+        public void PpuClock(ushort target)
         {
             if (enabled)
             {
@@ -97,7 +112,7 @@ namespace NesSharp
         }
 
         //clock
-        public bool apuClock(ushort target, ushort channel)
+        public bool ApuClock(ushort target, ushort channel)
         {
             bool changed = false;
             if (timer == 0 && enabled && shift > 0 && !mute)
@@ -127,26 +142,27 @@ namespace NesSharp
             return changed;
         }
     }
-    class Lengthcounter
+    public class Lengthcounter
     {
-        UInt16 counter = 0x00;
-        UInt16 clock(bool bEnable, bool bHalt)
+        sbyte counter = 0x00;
+        sbyte Clock(bool enable, bool pause)
         {
-            if (!bEnable)
+            if (!enable)
                 counter = 0;
             else
-                if (counter > 0 && !bHalt)
+                if (counter > 0 && !pause)
                 counter--;
             return counter;
         }
     }
 
-    class Oscpulse
+    //oscillates the soundwaves resulting in smoother sounds
+    public class Oscillator
     {
         double frequency = 0;
         double dutycycle = 0;
         double amplitude = 1;
-        double pi = 3.14159;
+        double pi = 3.141592653;
         double harmonics = 20;
 
         double Sample(double t)
@@ -158,7 +174,6 @@ namespace NesSharp
             for (double n = 1; n < harmonics; n++)
             {
                 double c = n * frequency * 2.0 * pi * t;
-                double c2 = Sinus(c);
                 a += -Sinus(c) / n;
                 b += -Sinus(c - p * n) / n;
             }
