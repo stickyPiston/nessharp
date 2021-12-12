@@ -1,11 +1,12 @@
-﻿using SFML.Audio;
-using SFML.Window;
-using System;
-using System.Threading;
+﻿using System.IO;
+using System.Text.Json;
 
 namespace NesSharp {
   class Emulator {
     static void Main(string[] args) {
+      string source = File.ReadAllText("./NesSharp/Configuration.json");
+      ConfigurationManager.LoadConfiguration(source);
+
       var bus = new Bus();
       var cpu = new CPU(bus);
       var controllerPort = new ControllerPort();

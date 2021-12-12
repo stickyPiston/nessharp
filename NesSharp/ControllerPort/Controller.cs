@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using SFML.Window;
 using static SFML.Window.Keyboard;
 
@@ -6,12 +7,15 @@ namespace NesSharp
 {
     public class Controller : InputDevice
     {
-        Keyboard.Key[] Keymap1 = new Keyboard.Key []{ Key.Q, Key.E, Key.Escape, Key.Space, Key.W, Key.S, Key.A, Key.D };
-        Keyboard.Key[] Keymap2 = new Keyboard.Key []{ Key.U, Key.O, Key.Escape, Key.Space, Key.I, Key.K, Key.J, Key.L };
+        Keyboard.Key[] Keymap1;
+        Keyboard.Key[] Keymap2;
         uint number;
 
         public Controller(uint number)
         {
+            var config = ConfigurationManager.getConfig();
+            Keymap1 = config.Keymap1.Select(mapStringToKey).ToArray();
+            Keymap2 = config.Keymap2.Select(mapStringToKey).ToArray();
             this.number = number;
         }
 
@@ -30,6 +34,25 @@ namespace NesSharp
             byte Bit = (byte)(register & 0x1);
             ror(ref register);
             return Bit;
+        }
+        private Keyboard.Key mapStringToKey(string s) {
+            switch (s) {
+                case "Q": return Key.Q;
+                case "E": return Key.E;
+                case "Esc": return Key.Escape;
+                case "Spc": return Key.Space;
+                case "W": return Key.W;
+                case "S": return Key.S;
+                case "A": return Key.A;
+                case "D": return Key.D;
+                case "U": return Key.U;
+                case "O": return Key.O;
+                case "I": return Key.I;
+                case "K": return Key.K;
+                case "J": return Key.J;
+                case "L": return Key.L;
+            }
+            return Key.A;
         }
     }
 }
