@@ -58,12 +58,6 @@ namespace NesSharp {
             PPU.PPU ppu = new PPU.PPU(im, bus);
             PPUMemoryBus ppubus = ppu.bus;
             ppubus.Palettes = new PPUPalettes();
-            ppubus.Palettes.Backgrounds = new[]
-            {
-                new Palette(new[] {Color.Red, Color.White, Color.Yellow}),
-                new Palette(new[] {Color.Magenta, Color.Cyan, Color.Red,}),
-                new Palette(new[] {Color.Green, Color.Red, Color.Blue,}), Palette.BasicColors,
-            };
             ppubus.Nametables = new RandomRam();
             ppubus.Patterntables = new RandomRam();
 
@@ -74,6 +68,8 @@ namespace NesSharp {
             
             byte x = 0; // Scrolling test
 
+
+            Clock c = new Clock();
             // Run Emulator
             while (true)
             {
@@ -95,6 +91,9 @@ namespace NesSharp {
 
                 rw.Draw(s);
                 rw.Display();
+                
+                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
+                c.Restart();
             }
         }
     }

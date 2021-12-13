@@ -28,7 +28,10 @@ namespace NesSharp.PPU
 
         public void FromByte(byte data)
         {
-            throw new NotImplementedException();
+            Palette = (byte) (data & 0b11);
+            Priority =       (data & 0b100000) == 0 ? SpritePriority.InFrontBackground : SpritePriority.BehindBackground;
+            HorizontalFlip = (data & 0b1000000) == 0 ? SpriteFlip.NotFlipped : SpriteFlip.Flipped;
+            VerticalFlip   = (data & 0b10000000) == 0 ? SpriteFlip.NotFlipped : SpriteFlip.Flipped;
         }
     }
     

@@ -1,10 +1,11 @@
-﻿using SFML.Graphics;
+﻿using System.Runtime.InteropServices;
+using SFML.Graphics;
 
 namespace NesSharp.PPU
 {
-    public class Palette
+    public class Palette : IAddressable
     {
-        public static readonly Palette BasicColors = new Palette(new []
+        public static readonly Color[] BasicColors =
         {
             new Color(0x656565ff),
             new Color(0x002D69ff),
@@ -22,7 +23,7 @@ namespace NesSharp.PPU
             new Color(0x000000ff),
             new Color(0x000000ff),
             new Color(0x000000ff),
-            
+
             new Color(0xAEAEAEff),
             new Color(0x0F63B3ff),
             new Color(0x4051D0ff),
@@ -39,7 +40,7 @@ namespace NesSharp.PPU
             new Color(0x000000ff),
             new Color(0x000000ff),
             new Color(0x000000ff),
-            
+
             new Color(0xFEFEFFff),
             new Color(0x5DB3FFff),
             new Color(0x8FA1FFff),
@@ -56,7 +57,7 @@ namespace NesSharp.PPU
             new Color(0x4E4E4Eff),
             new Color(0x000000ff),
             new Color(0x000000ff),
-            
+
             new Color(0xFEFEFFff),
             new Color(0xBCDFFFff),
             new Color(0xD1D8FFff),
@@ -73,17 +74,23 @@ namespace NesSharp.PPU
             new Color(0xB6B6B6ff),
             new Color(0x000000ff),
             new Color(0x000000ff),
-        });
+        };
         
-        public Color[] Colors
+        private byte[] ColorIndices = new byte[4];
+        
+        public Color this[int index]
         {
-            get;
-            private set;
+            get => BasicColors[ColorIndices[index]];
         }
 
-        public Palette(Color[] Colors)
+        public byte Read(ushort addr)
         {
-            this.Colors = Colors;
+            return ColorIndices[addr];
+        }
+
+        public void Write(ushort addr, byte data)
+        {
+            ColorIndices[addr] = data;
         }
     }
 }

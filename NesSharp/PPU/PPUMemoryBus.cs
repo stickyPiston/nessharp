@@ -22,7 +22,16 @@
 
         public void Write(ushort addr, byte data)
         {
-            throw new System.NotImplementedException();
+            if (addr >= 0x3f00 && addr <= 0x3f1f)
+            {
+                Palettes.Write(addr, data);
+            }
+            else if (addr >= 0x2000 && addr < 0x3000)
+            {
+                Nametables.Write((ushort)(addr - 0x2000), data);
+            }
+            else
+                throw new System.NotImplementedException($"Can't write to {addr:x4}");
         }
     }
 }

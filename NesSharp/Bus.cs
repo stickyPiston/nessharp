@@ -41,6 +41,8 @@ namespace NesSharp {
 
         private byte clock = 0;
 
+        public int OAMDMACycles = 0;
+
         //public Run(string romFilepath) { when the emulator accepts roms
         public void RunFrame() {
             int frames = ppu.FrameCycleCount();
@@ -52,10 +54,11 @@ namespace NesSharp {
 
         public void Tick() {
             ppu.Cycle();
-            if (clock == 0) cpu.Cycle();
-            // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
+            if (clock == 0 && OAMDMACycles == 0) cpu.Cycle();
 
-            // TODO: OAM DMA
+            if (OAMDMACycles > 0) OAMDMACycles--;
+            // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
+            
 
             clock += 1;
             clock %= 3;

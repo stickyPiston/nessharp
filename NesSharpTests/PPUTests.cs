@@ -27,12 +27,6 @@ namespace NesSharpTests {
             PPU ppu = new PPU(null, bus);
             PPUMemoryBus ppubus = ppu.bus;
             ppubus.Palettes = new PPUPalettes();
-            ppubus.Palettes.Backgrounds = new[]
-            {
-                new Palette(new[] {Color.Red, Color.White, Color.Yellow}),
-                new Palette(new[] {Color.Magenta, Color.Cyan, Color.Red,}),
-                new Palette(new[] {Color.Green, Color.Red, Color.Blue,}), Palette.BasicColors,
-            };
             ppubus.Nametables = new RandomRam();
             ppubus.Patterntables = new RandomRam();
             bus.Register(ppu);
