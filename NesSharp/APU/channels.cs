@@ -5,10 +5,12 @@ namespace NesSharp
     public class X2A03
     {
         //https://wiki.nesdev.com/w/index.php/APU_Length_Counter
-        private readonly short[] lc_table = {10, 254, 20,  2, 40,  4, 80,  6, 160,   
-                                    8, 60, 10, 14, 12, 26, 14, 12,  16, 
-                                    24, 18, 48, 20, 96, 22, 192,  24, 72, 
+        private readonly short[] lc_table = {10, 254, 20,  2, 40,  4, 80,  6, 160,
+                                    8, 60, 10, 14, 12, 26, 14, 12,  16,
+                                    24, 18, 48, 20, 96, 22, 192,  24, 72,
                                     26, 16, 28, 32, 30};
+
+        //https://www.nesdev.org/2A03%20technical%20reference.txt
         public void CpuWrite(UInt16 addr, sbyte value)
         {
             Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
@@ -18,12 +20,12 @@ namespace NesSharp
                 //pulse 1 channel
                 case 0x4000:
                     switch ((value & 0xC0) >> 6)
-                    {  
+                    {
                         case 0x00: pulse1.p_seq.sequence = 0b01000000; pulse1.p_osc.dutycycle = 0.125; break;
                         case 0x01: pulse1.p_seq.new_sequence = 0b01100000; pulse1.p_osc.dutycycle = 0.250; break;
                         case 0x02: pulse1.p_seq.new_sequence = 0b01111000; pulse1.p_osc.dutycycle = 0.500; break;
                         case 0x03: pulse1.p_seq.new_sequence = 0b10011111; pulse1.p_osc.dutycycle = 0.750; break;
-                        
+
                     }
                     pulse1.p_seq.sequence = pulse1.p_seq.new_sequence;
                     pulse1.p_halt = Convert.ToBoolean(value & 0x20);
@@ -51,7 +53,7 @@ namespace NesSharp
                     pulse1.p_env.start = true;
                     break;
 
-                    //pulse 2 channel
+                //pulse 2 channel
                 case 0x4004:
                     switch ((value & 0xC0) >> 6)
                     {
@@ -87,7 +89,8 @@ namespace NesSharp
                     break;
             }
         }
-        
+
+        //the pulse object, used in both pulse channels
         public class Pulse
         {
             public bool p_status;
@@ -107,22 +110,35 @@ namespace NesSharp
                 p_sample = a;
                 p_output = b;
 
-                p_seq =  new Sequencer(z, h);
+                p_seq = new Sequencer(z, h);
                 p_osc = new Oscillator(z);
                 p_env = new Envelope(i, h);
                 p_swp = new Sweeper(i, j);
                 p_lc = new Lengthcounter(j);
             }
         }
-        //cpuread method
-        /*(public int CpuRead(ushort addr)
+
+        public class Triangle
         {
-        }*/
-    }
+            public Triangle()
+            {
 
+            }
 
+        }
+}
+
+    //cpuread method
+    /*(public int CpuRead(ushort addr)
+    {
+    }*/
     public class ApuClock
     {
+        public ApuClock()
+        { 
+        
+        }
+            
 
     }
 
