@@ -14,8 +14,8 @@ namespace NesSharp
         public Controller(uint number)
         {
             var config = ConfigurationManager.getConfig();
-            Keymap1 = config.Keymap1.Select(mapStringToKey).ToArray();
-            Keymap2 = config.Keymap2.Select(mapStringToKey).ToArray();
+            Keymap1 = config.Keymap1;
+            Keymap2 = config.Keymap2;
             this.number = number;
         }
 
