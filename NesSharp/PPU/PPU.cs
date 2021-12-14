@@ -267,7 +267,7 @@ namespace NesSharp.PPU
                             }
                             else
                             {
-                                color = bus.Palettes.Sprites[spriteAttributeLatches[i].Palette][spriteColorIndex-1];
+                                color = bus.Palettes.Sprites[spriteAttributeLatches[i].Palette][spriteColorIndex - 1];
                             }
 
                             currentFrame.SetPixel(pixel - 1, scanline, color);
@@ -452,7 +452,8 @@ namespace NesSharp.PPU
                     break;
                 case 7:
                     tempBackgroundByte =
-                        bus.Read((ushort) ((control.BackgroundPatterntableAddress | ((nametableByte) << 4) | ((v >> 12) + 8))));
+                        bus.Read((ushort) ((control.BackgroundPatterntableAddress | ((nametableByte) << 4) |
+                                            ((v >> 12) + 8))));
                     break;
                 case 0:
                     patterntableWord |= tempBackgroundByte;
@@ -593,7 +594,7 @@ namespace NesSharp.PPU
 
         byte getTileAttr()
         {
-            ushort addr = (ushort) (0x23c0 | (v & 0x0c00) |  ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+            ushort addr = (ushort) (0x23c0 | (v & 0x0c00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
             // ushort addr = (ushort) ((control.BaseNametableAddress + 0x23c0 + (v & 0x0c00)) |  ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
             return bus.Read(addr);
         }
@@ -624,7 +625,6 @@ namespace NesSharp.PPU
                 default:
                     throw new NotImplementedException($"Could not read {addr:x4}");
             }
-            
         }
 
         public byte OAMADDR;
@@ -655,7 +655,11 @@ namespace NesSharp.PPU
                     break;
                 case 0x2004:
                     oam.Write(OAMADDR, data);
-                    unchecked { OAMADDR++; }
+                    unchecked
+                    {
+                        OAMADDR++;
+                    }
+
                     break;
                 case 0x2005:
                     if (!w)
@@ -696,96 +700,96 @@ namespace NesSharp.PPU
             }
         }
     }
-}
 
-enum SpriteSize
-{
-    _8x8 = 0,
-    _8x16 = 1
-}
-
-struct PPUCTRL
-{
-    public ushort BaseNametableAddress;
-    public ushort VramAddrInc;
-    public ushort SpritePatterntableAddress8x8;
-    public ushort BackgroundPatterntableAddress;
-    public SpriteSize SpriteSize;
-    public bool GenNMI_VBL;
-
-    public byte ToByte()
+    enum SpriteSize
     {
-        throw new NotImplementedException();
+        _8x8 = 0,
+        _8x16 = 1
     }
 
-    public void FromByte(byte data)
+    struct PPUCTRL
     {
-        BaseNametableAddress = (ushort) (0x2000 + 0x400 * (data & 0b11));
-        VramAddrInc = (ushort) (1 + ((data & 0b100) >> 2) * 31);
-        SpritePatterntableAddress8x8 = (ushort) ((data & 0b1000) * 0x0200);
-        BackgroundPatterntableAddress = (ushort) ((data & 0b10000) * 0x0100);
-        SpriteSize = (data & 0b100000) == 0 ? SpriteSize._8x8 : SpriteSize._8x16;
-        //PPU master/slave select not implemented
-        GenNMI_VBL = (data & 0x80) != 0;
-    }
-}
+        public ushort BaseNametableAddress;
+        public ushort VramAddrInc;
+        public ushort SpritePatterntableAddress8x8;
+        public ushort BackgroundPatterntableAddress;
+        public SpriteSize SpriteSize;
+        public bool GenNMI_VBL;
 
-struct PPUMASK
-{
-    public bool greyscale;
-    public bool BackgroundOnLeft8;
-    public bool SpritesOnLeft8;
-    public bool ShowBackground;
-    public bool ShowSprites;
-    public bool EmphasizeRed;
-    public bool EmphasizeGreen;
-    public bool EmphasizeBlue;
+        public byte ToByte()
+        {
+            throw new NotImplementedException();
+        }
 
-
-    public byte ToByte()
-    {
-        throw new NotImplementedException();
+        public void FromByte(byte data)
+        {
+            BaseNametableAddress = (ushort) (0x2000 + 0x400 * (data & 0b11));
+            VramAddrInc = (ushort) (1 + ((data & 0b100) >> 2) * 31);
+            SpritePatterntableAddress8x8 = (ushort) ((data & 0b1000) * 0x0200);
+            BackgroundPatterntableAddress = (ushort) ((data & 0b10000) * 0x0100);
+            SpriteSize = (data & 0b100000) == 0 ? SpriteSize._8x8 : SpriteSize._8x16;
+            //PPU master/slave select not implemented
+            GenNMI_VBL = (data & 0x80) != 0;
+        }
     }
 
-    public void FromByte(byte data)
+    struct PPUMASK
     {
-        greyscale = (data & 0x01) != 0;
-        BackgroundOnLeft8 = (data & 0x02) != 0;
-        SpritesOnLeft8 = (data & 0x04) != 0;
-        ShowBackground = (data & 0x08) != 0;
-        ShowSprites = (data & 0x10) != 0;
-        EmphasizeRed = (data & 0x20) != 0;
-        EmphasizeGreen = (data & 0x40) != 0;
-        EmphasizeBlue = (data & 0x80) != 0;
-        
-        // Console.WriteLine($"Show Background = {ShowBackground}");
-        // Console.WriteLine($"Show Sprites = {ShowSprites}");
-    }
-}
+        public bool greyscale;
+        public bool BackgroundOnLeft8;
+        public bool SpritesOnLeft8;
+        public bool ShowBackground;
+        public bool ShowSprites;
+        public bool EmphasizeRed;
+        public bool EmphasizeGreen;
+        public bool EmphasizeBlue;
 
-struct PPUSTATUS
-{
-    public byte lastRegWrite;
-    public bool SpriteOverflow;
-    public bool Sprite0Hit;
-    public bool VblankStarted;
 
-    public byte ToByte()
-    {
-        byte val = (byte) (lastRegWrite & 0x1f);
+        public byte ToByte()
+        {
+            throw new NotImplementedException();
+        }
 
-        if (SpriteOverflow)
-            val |= 0x20;
-        if (Sprite0Hit)
-            val |= 0x40;
-        if (VblankStarted)
-            val |= 0x80;
+        public void FromByte(byte data)
+        {
+            greyscale = (data & 0x01) != 0;
+            BackgroundOnLeft8 = (data & 0x02) != 0;
+            SpritesOnLeft8 = (data & 0x04) != 0;
+            ShowBackground = (data & 0x08) != 0;
+            ShowSprites = (data & 0x10) != 0;
+            EmphasizeRed = (data & 0x20) != 0;
+            EmphasizeGreen = (data & 0x40) != 0;
+            EmphasizeBlue = (data & 0x80) != 0;
 
-        return val;
+            // Console.WriteLine($"Show Background = {ShowBackground}");
+            // Console.WriteLine($"Show Sprites = {ShowSprites}");
+        }
     }
 
-    public void FromByte(byte data)
+    struct PPUSTATUS
     {
-        throw new NotImplementedException();
+        public byte lastRegWrite;
+        public bool SpriteOverflow;
+        public bool Sprite0Hit;
+        public bool VblankStarted;
+
+        public byte ToByte()
+        {
+            byte val = (byte) (lastRegWrite & 0x1f);
+
+            if (SpriteOverflow)
+                val |= 0x20;
+            if (Sprite0Hit)
+                val |= 0x40;
+            if (VblankStarted)
+                val |= 0x80;
+
+            return val;
+        }
+
+        public void FromByte(byte data)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
