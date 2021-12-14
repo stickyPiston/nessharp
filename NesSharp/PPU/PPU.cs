@@ -484,8 +484,8 @@ namespace NesSharp.PPU
                     )) & 1);
                     // paletteLatch1 = (byte) ((attrtableByte >> (((v & 0x4000) >> 12) | ((x & 0b100)))) & 2);
                     // paletteLatch2 = (byte) (((attrtableByte >> (((v & 0x4000) >> 12) | ((x & 0b100)))) >> 2) & 1);
-                    PatternTableShift1 |= (ushort) (patterntableWord & 0x00ff);
-                    PatternTableShift2 |= (ushort) ((patterntableWord >> 8) & 0x00ff);
+                    PatternTableShift1 |= (ushort) ((patterntableWord >> 8) & 0x00ff);
+                    PatternTableShift2 |= (ushort) (patterntableWord & 0x00ff);
                     if (pixel == 256)
                         YIncrement();
                     else
