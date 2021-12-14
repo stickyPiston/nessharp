@@ -66,7 +66,9 @@ namespace NesSharp {
             bus.Register(ppu);
             bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
             bus.Register(ppu, new []{new Range(0x4014, 0x4014)});
-            bus.Register(new RAM(0x10000), new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x4017)});
+            RAM ram = new RAM(0x10000);
+            bus.Register(ram, new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)});
+            bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0x800, 0x1fff)});
             
             // Enable rendering
             // ppu.Write(0x2001, 0x18);
