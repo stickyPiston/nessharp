@@ -475,11 +475,11 @@ namespace NesSharp.PPU
                 case 0:
                     patterntableWord |= tempBackgroundByte;
                     paletteLatch1 = (byte) ((attrtableByte >> (
-                        ((v & 0x40) >> 6) |
+                        ((v & 0x40) >> 4) |
                         ((v & 0b10) << 0)
                     )) & 1);
                     paletteLatch2 = (byte) ((attrtableByte >> (
-                        (((v & 0x40) >> 6) |
+                        (((v & 0x40) >> 4) |
                          ((v & 0b10) << 0)) + 1
                     )) & 1);
                     // paletteLatch1 = (byte) ((attrtableByte >> (((v & 0x4000) >> 12) | ((x & 0b100)))) & 2);
