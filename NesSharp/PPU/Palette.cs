@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 using SFML.Graphics;
 
 namespace NesSharp.PPU
@@ -80,7 +81,10 @@ namespace NesSharp.PPU
         
         public Color this[int index]
         {
-            get => BasicColors[ColorIndices[index]];
+            get {
+            // Console.WriteLine(index);
+            return BasicColors[ColorIndices[index]];
+        }
         }
 
         public byte Read(ushort addr)
@@ -90,6 +94,7 @@ namespace NesSharp.PPU
 
         public void Write(ushort addr, byte data)
         {
+            // Console.WriteLine($"{addr:x4} = {data:x}");
             ColorIndices[addr] = data;
         }
     }

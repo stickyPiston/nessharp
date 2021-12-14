@@ -54,7 +54,11 @@ namespace NesSharp {
 
         public void Tick() {
             ppu.Cycle();
-            if (clock == 0 && OAMDMACycles == 0) cpu.Cycle();
+            if (clock == 0 && OAMDMACycles == 0)
+            {
+                cpu.Cycle();
+                // Console.WriteLine(cpu.DumpCycle());
+            }
 
             if (OAMDMACycles > 0) OAMDMACycles--;
             // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
@@ -107,6 +111,8 @@ namespace NesSharp {
         }
 
         public byte Read(ushort addr) {
+            // Console.WriteLine($"read {addr:x4}");
+
             foreach(KeyValuePair<Range, IAddressable> range in ranges)
             {
                 if(addr >= range.Key.start && addr <= range.Key.end)
@@ -114,10 +120,12 @@ namespace NesSharp {
                     return range.Value.Read(addr);
                 }
             }
-            return 0;
+            throw new Exception($"Can't read from {addr:x4}");
+
         }
 
         public void Write(ushort addr, byte data) {
+            // Console.WriteLine($"{addr:x4} = {data:x2}");
            foreach(KeyValuePair<Range, IAddressable> range in ranges)
            {
                 if(addr >= range.Key.start && addr <= range.Key.end)
@@ -126,6 +134,8 @@ namespace NesSharp {
                     return;
                 }
            }
+
+           throw new Exception($"Can't write to {addr:x4}");
         }
     };
 }

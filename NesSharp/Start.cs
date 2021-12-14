@@ -40,8 +40,10 @@ namespace NesSharp {
             var cpu = new CPU(bus);
             var controllerPort = new ControllerPort();
 
-            var controller = new Controller(1);
-            controllerPort.register(controller);
+            var controller1 = new Controller(1);
+            var controller2 = new Controller(2);
+            controllerPort.register(controller1);
+            controllerPort.register(controller2);
             bus.Register(cpu);
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            
@@ -61,30 +63,42 @@ namespace NesSharp {
             ppubus.Nametables = new RandomRam();
             ppubus.Patterntables = new RandomRam();
 
-            bus.Register(ppu); 
+            bus.Register(ppu);
+            bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
+            bus.Register(ppu, new []{new Range(0x4014, 0x4014)});
+            bus.Register(new RAM(0x10000), new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x4017)});
             
             // Enable rendering
-            ppu.Write(0x2001, 0x08);
+            // ppu.Write(0x2001, 0x18);
             
             byte x = 0; // Scrolling test
 
+            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\OneDrive - Universiteit Utrecht\\Uni\\nessharp\\NesSharpTests\\roms\\ppu_vbl_nmi\\rom_singles\\10-even_odd_timing.nes");
+            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\Donkey Kong (World) (Rev A).nes");
+            Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\Super Mario Bros. (World).nes");
+            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\color_test.nes");
+            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\blargg_ppu_tests_2005.09.15b\\palette_ram.nes");
+            Console.WriteLine(cart.rombytes.Length);
+            for (int i = 0; i < cart.rombytes.Length; i++)
+            {
+                bus.Write((ushort)(0x8000 + i), cart.rombytes[i]);
+                if (cart.rombytes.Length == 0x4000)
+                {
+                    bus.Write((ushort)(0xc000 + i), cart.rombytes[i]);
 
+                }
+            }
+            for (int i = 0; i < cart.vrombytes.Length; i++)
+            {
+                ppubus.Write((ushort)i, cart.vrombytes[i]);                
+            }
+
+            
             Clock c = new Clock();
             // Run Emulator
             while (true)
             {
-                int frames = ppu.FrameCycleCount();
-                for (int i = 0; i < 250 * 341; i++) bus.Tick();
-                
-                // Scrolling test
-                ppu.Read(0x2002);
-                ppu.Write(0x2005, x);
-                unchecked
-                {
-                    x++;
-                }
-
-                for (int i = 250 * 341; i < frames; i++) bus.Tick();
+                bus.RunFrame();
 
                 rw.DispatchEvents();
                 rw.Clear();
@@ -92,7 +106,7 @@ namespace NesSharp {
                 rw.Draw(s);
                 rw.Display();
                 
-                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
+                // Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
         }

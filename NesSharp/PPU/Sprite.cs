@@ -23,7 +23,15 @@ namespace NesSharp.PPU
 
         public byte ToByte()
         {
-            throw new NotImplementedException();
+            byte res = 0;
+            res |= Palette;
+            if (Priority == SpritePriority.BehindBackground)
+                res |= 0x20;
+            if (HorizontalFlip == SpriteFlip.Flipped)
+                res |= 0x40;
+            if (VerticalFlip == SpriteFlip.Flipped)
+                res |= 0x80;
+            return res;
         }
 
         public void FromByte(byte data)
