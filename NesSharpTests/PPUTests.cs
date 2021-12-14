@@ -19,7 +19,7 @@ namespace NesSharpTests {
             bus = new Bus();
 
             ram = new RAM(0x10000);
-            bus.Register(ram, new Range[] { new Range(0x0000, 0x07FF), new Range(0x6000, 0xFFFF) });
+            bus.Register(ram, new Range[] { new Range(0x0000, 0x07FF), new Range(0x6000, 0xFFFF), new Range(0x4000, 0x4017) });
 
             cpu = new CPU(bus);
             bus.Register(cpu);
