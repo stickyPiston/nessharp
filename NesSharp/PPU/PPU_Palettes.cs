@@ -22,7 +22,7 @@ namespace NesSharp.PPU
         {
             addr = (ushort)(addr - 0x3f00);
             int palNumber = (addr >> 2) & 0b11;
-            ushort palSubAddr = (ushort)(addr & 0b11);
+            ushort palSubAddr = (ushort)((addr-1) & 0b11);
             if (addr == 0)
             {
                 return background;
@@ -41,7 +41,7 @@ namespace NesSharp.PPU
         {
             addr = (ushort)(addr - 0x3f00);
             int palNumber = (addr >> 2) & 0b11;
-            ushort palSubAddr = (ushort)(addr & 0b11);
+            ushort palSubAddr = (ushort)((addr-1) & 0b11);
             if (addr == 0)
             {
                 background = data;

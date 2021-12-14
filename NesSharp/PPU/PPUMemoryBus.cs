@@ -17,6 +17,10 @@
             {
                 return Nametables.Read((ushort)((addr - 0x2000) % 0x1000));
             }
+            if (addr <= 0x3fff)
+            {
+                return Palettes.Read((ushort)(0x3f00 + ((addr - 0x3f00) % 0xe0)));
+            }
             throw new System.NotImplementedException();
         }
 
