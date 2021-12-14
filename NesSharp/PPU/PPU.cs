@@ -103,26 +103,8 @@ namespace NesSharp.PPU
         private SpriteRenderingStatus[] RenderingStatuses = new SpriteRenderingStatus[8];
         private int[] SpriteRenderingCounters = new int[8];
 
-        private byte tempOamData;
-
         public void Cycle()
         {
-            if (MainBus.OAMDMACycles != 0 && MainBus.OAMDMACycles <= 512)
-            {
-                int cycle = 512 - MainBus.OAMDMACycles;
-
-                switch (cycle % 2)
-                {
-                    case 0:
-                        tempOamData = MainBus.Read((ushort) (DMACopyAddr | (cycle >> 2)));
-                        break;
-                    case 1:
-                        oam.Write(OAMADDR, tempOamData);
-                        OAMADDR++;
-                        break;
-                }
-            }
-
             if (mask.ShowBackground)
             {
                 if (scanline <= 239)
@@ -645,7 +627,7 @@ namespace NesSharp.PPU
             
         }
 
-        private ushort OAMADDR;
+        public byte OAMADDR;
 
         public void Write(ushort addr, byte data)
         {
@@ -673,7 +655,7 @@ namespace NesSharp.PPU
                     break;
                 case 0x2004:
                     oam.Write(OAMADDR, data);
-                    OAMADDR++;
+                    unchecked { OAMADDR++; }
                     break;
                 case 0x2005:
                     if (!w)
@@ -706,8 +688,7 @@ namespace NesSharp.PPU
                     v += control.VramAddrInc;
                     break;
                 case 0x4014:
-                    MainBus.OAMDMACycles = ODDFRAME ? 514 : 513;
-                    DMACopyAddr = (ushort) (data << 8);
+                    MainBus.BeginOAM((ushort) (data << 8));
                     break;
                 default:
                     throw new NotImplementedException($"Writing to address 0x{addr:X4} is not implemented");

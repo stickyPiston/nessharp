@@ -41,7 +41,9 @@ namespace NesSharp {
 
         private byte clock = 0;
 
-        public int OAMDMACycles = 0;
+        private int OAMDMACycles = 0;
+        private byte OAMDATA = 0;
+        private ushort DMACopyAddr;
 
         //public Run(string romFilepath) { when the emulator accepts roms
         public void RunFrame() {
@@ -52,11 +54,28 @@ namespace NesSharp {
             }
         }
 
+        public void BeginOAM(ushort DMACopyAddr) {
+            OAMDMACycles = clock < 3 ? 514 : 513;
+            this.DMACopyAddr = DMACopyAddr;
+        }
+
         public void Tick() {
             ppu.Cycle();
-            if (clock == 0 && OAMDMACycles == 0)
+            if (clock % 3 == 0)
             {
-                cpu.Cycle();
+                if (OAMDMACycles == 0) {
+                    cpu.Cycle();
+                } else if (OAMDMACycles <= 512) {
+                    int cycle = 512 - OAMDMACycles;
+                    switch (cycle & 1) {
+                        case 0:
+                            OAMDATA = Read((ushort) (DMACopyAddr | (cycle >> 2)));
+                            break;
+                        case 1:
+                            ppu.Write(0x2004, OAMDATA);
+                            break;
+                    }
+                }
                 // Console.WriteLine(cpu.DumpCycle());
             }
 
@@ -65,7 +84,7 @@ namespace NesSharp {
             
 
             clock += 1;
-            clock %= 3;
+            clock %= 6;
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>
