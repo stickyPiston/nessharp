@@ -1,5 +1,7 @@
 using NUnit.Framework;
 using NesSharp;
+using NesSharp.PPU;
+using SFML.Graphics;
 
 namespace NesSharpTests {
     class ChipA : IAddressable {
@@ -73,7 +75,14 @@ namespace NesSharpTests {
             
             var cpu = new CPU(bus);
 
+            PPU ppu = new PPU(null, bus);
+            PPUMemoryBus ppubus = ppu.bus;
+            ppubus.Palettes = new PPUPalettes();
+            ppubus.Nametables = new RandomRam();
+            ppubus.Patterntables = new RandomRam();
+
             bus.Register(cpu);
+            bus.Register(ppu);
 
             for (int i = 0; i < 15 * 3; i++) bus.Tick();
 

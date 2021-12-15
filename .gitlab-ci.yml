@@ -34,6 +34,8 @@ debug:
   before_script:
    - 'echo | dotnet --version' # must be v 2.2.300 or later for reporter tool to work
    - dotnet tool install dotnet-reportgenerator-globaltool --tool-path tools
+   - apt update -qq 
+   - apt install -qq -y libcsfml-dev
   stage: test
   script:
     - dotnet test --logger "junit" --collect:"XPlat Code Coverage" "/p:DefineConstants=SERVER"
@@ -56,6 +58,8 @@ release:
   before_script:
    - 'echo | dotnet --version' # must be v 2.2.300 or later for reporter tool to work
    - dotnet tool install dotnet-reportgenerator-globaltool --tool-path tools
+   - apt update -qq
+   - apt install -qq -y libcsfml-dev
   stage: test
   script:
     - dotnet test -c Release --logger "junit" --collect:"XPlat Code Coverage" "/p:DefineConstants=SERVER"

@@ -14,10 +14,10 @@ namespace NesSharp
         /// Otherwise it does nothing and returns false.</summary>
         private bool CheckPending(bool irq = true)
         {
-            if (pending != null && (irq || pending == HardwareInterrupt.NMI))
+            if (prevpolled != null && (irq || prevpolled == HardwareInterrupt.NMI))
             {
                 // Poll next interrupt
-                SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
+                SetInstruction(prevpolled == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                 return true;
             }
             return false;
@@ -124,7 +124,7 @@ namespace NesSharp
             } else {
                 // Next instruction
                 // "a taken non-page-crossing branch ignores IRQ/NMI during its last clock, so that next instruction executes before the IRQ"
-                cpu.NextInstruction(cpu.previous != null);
+                cpu.NextInstruction(cpu.prevprevpolled != null);
             }
 
         };
@@ -335,15 +335,16 @@ namespace NesSharp
         }
 
         /// <summary>Pushes P register to the stack.</summary>
-        private static Cycle PushP(bool B)
+        private static Cycle PushP(bool B, bool hijack = true)
         {
             if (B) return cpu => {
                 // Interrupt hijack (all hardware interrupts)
-                cpu.CheckPending(true);
-
-                if (cpu.pending == HardwareInterrupt.NMI) {
-                    // Reset NMI on handle
-                    cpu.pending = null;
+                if (hijack) {
+                    cpu.CheckPending(true);
+                    if (cpu.polled == HardwareInterrupt.NMI) {
+                        // Reset NMI on handle
+                        cpu.polled = null;
+                    }
                 }
 
                 cpu.P.B = 1; // Set B flag
@@ -353,11 +354,12 @@ namespace NesSharp
             };
             else return cpu => {
                 // Interrupt hijack (only NMI)
-                cpu.CheckPending(false);
-
-                if (cpu.pending == HardwareInterrupt.NMI) {
-                    // Reset NMI on handle
-                    cpu.pending = null;
+                if (hijack) {
+                    cpu.CheckPending(false);
+                    if (cpu.polled == HardwareInterrupt.NMI) {
+                        // Reset NMI on handle
+                        cpu.polled = null;
+                    }
                 }
 
                 cpu.P.B = 0; // Unset B flag
