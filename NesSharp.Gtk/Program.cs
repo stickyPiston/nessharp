@@ -1,9 +1,7 @@
 ﻿using System;
 using Eto.Forms;
 
-using System.Reflection;
 using System.Runtime.InteropServices;
-
 
 namespace NesSharp.Gtk
 {

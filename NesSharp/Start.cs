@@ -43,6 +43,10 @@ namespace NesSharp {
             ClientSize = new Size(256 * 2, 240 * 2);
             Resizable = false;
             Content = panel = new Drawable();
+
+            this.Menu = new MenuBar();
+            MenuItem item = new ButtonMenuItem { Text = "File" };
+            this.Menu.Items.Add(item);
         }
 
         public void Loop(IntPtr handle) {
