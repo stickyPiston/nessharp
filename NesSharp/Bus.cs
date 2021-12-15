@@ -13,12 +13,13 @@ namespace NesSharp {
         }
     };
 
-    public class Bus : IAddressable {
+    public class Bus {
         private CPU cpu;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
         private byte clock = 0;
+        private byte open = 0;
 
         //public Run(string romFilepath) { when the emulator accepts roms
         public void Run() {
@@ -75,10 +76,12 @@ namespace NesSharp {
             {
                 if(addr >= range.Key.start && addr <= range.Key.end)
                 {
-                    return range.Value.Read(addr);
+                    (byte read, byte setbits) = range.Value.Read(addr);
+                    open = (byte) (read | (~setbits & open));
+                    return open;
                 }
             }
-            return 0;
+            return open;
         }
 
         public void Write(ushort addr, byte data) {

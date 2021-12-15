@@ -13,11 +13,11 @@ namespace NesSharpTests
             register = 0b10000101; // A, Down, Right
         }
 
-        public override byte Read()
+        public override (byte, byte) Read()
         {
+            register = rol(register);
             byte bit = (byte)(register & 1);
-            ror(ref register);
-            return bit;
+            return (bit, 0xFF);
         }
     };
 
@@ -41,7 +41,7 @@ namespace NesSharpTests
 
                 if (addr == 0x4016)
                 {
-                    var b = cp.Read(addr);
+                    var b = cp.Read(addr).Item1;
                     Assert.AreEqual(b, 0x0);
                 }
 
@@ -49,19 +49,19 @@ namespace NesSharpTests
                 cp.Write(addr, 0x0); // Stop the gathering of input
 
                 byte output = 0x0;
-                for (uint i = 0; i < 8; i++)
-                    output |= (byte)(cp.Read(addr) << (byte)i);
+                for (int i = 7; i >= 0; i--)
+                    output |= (byte)(cp.Read(addr).Item1 << (byte)i);
 
                 Assert.AreEqual(output, 0b10000101);
 
-                var bit = cp.Read(addr);
+                var bit = cp.Read(addr).Item1;
                 Assert.AreEqual(output & 1, bit);
 
                 // The register should reset after the 1->0 writing
                 cp.Write(addr, 0x1); // Allow the gathering of input
                 cp.Write(addr, 0x0); // Stop the gathering of input
 
-                bit = cp.Read(addr);
+                bit = cp.Read(addr).Item1;
                 Assert.AreEqual(output & 1, bit);
             }
         }

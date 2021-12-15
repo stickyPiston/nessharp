@@ -10,8 +10,8 @@ namespace NesSharpTests
         public void RWTest()
         {
             TRAM.Write(0x0069, 1);
-            Assert.AreEqual(TRAM.Read(0x0069), 1);
-            Assert.AreEqual(TRAM.Read(0x0096), 0);
+            Assert.AreEqual(TRAM.Read(0x0069).Item1, 1);
+            Assert.AreEqual(TRAM.Read(0x0096).Item1, 0);
         }
     }
 }

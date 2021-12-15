@@ -9,7 +9,7 @@ namespace NesSharp
     public partial class CPU
     {
         // Bus
-        private IAddressable bus;
+        private Bus bus;
         
         // Registers
         public ushort PC { get; private set; }
@@ -124,7 +124,7 @@ namespace NesSharp
         public HardwareInterrupt? pending  { get; private set; } // this cycle
         public HardwareInterrupt? previous { get; private set; } // previous cycle
 
-        public CPU(IAddressable bus)
+        public CPU(Bus bus)
         {
             this.bus = bus;
 

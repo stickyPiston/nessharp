@@ -9,9 +9,9 @@
             Data = new byte[Capacity];
         }
 
-        public byte Read(ushort addr)
+        public (byte, byte) Read(ushort addr)
         {
-            return Data[addr];
+            return (Data[addr], 0xFF);
         }
 
         public void Write(ushort addr, byte data)
