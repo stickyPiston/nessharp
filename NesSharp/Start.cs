@@ -7,6 +7,9 @@ using SFML.System;
 using SFML.Graphics;
 using NesSharp.PPU;
 using Sprite = SFML.Graphics.Sprite;
+using Eto.Forms;
+using Eto.Drawing;
+using Drawable = Eto.Forms.Drawable;
 
 namespace NesSharp {
     public class RandomRam : IAddressable
@@ -31,12 +34,50 @@ namespace NesSharp {
         }
     }
 
-    class Emulator
+    public class MainForm : Form
     {
-        static void Main(string[] args)
-        {
+        public Drawable panel; 
+
+        public MainForm() {
+            Title = "NES#";
+            ClientSize = new Size(256 * 2, 240 * 2);
+            Resizable = false;
+            Content = panel = new Drawable();
+        }
+
+        public void Loop(IntPtr handle) {
+            Emulator emulator = new Emulator();
+            emulator.Setup(handle);
+
+            Clock c = new Clock();
+            // Run Emulator
+            while (Visible)
+            {
+                Application.Instance.RunIteration();
+
+                emulator.bus.RunFrame();
+
+                emulator.rw.DispatchEvents();
+                emulator.rw.Clear();
+
+                emulator.rw.Draw(emulator.s);
+                emulator.rw.Display();
+                
+                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
+                c.Restart();
+            }
+        }
+    }
+
+    public class Emulator
+    {
+        public RenderWindow rw;
+        public Sprite s;
+        public Bus bus;
+
+        public void Setup(IntPtr handle) {
             // Create Bus, CPU, and ControllerPort
-            var bus = new Bus();
+            bus = new Bus();
             var cpu = new CPU(bus);
             var controllerPort = new ControllerPort();
 
@@ -48,12 +89,17 @@ namespace NesSharp {
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            
             // Create window
-            RenderWindow rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
-            rw.Size = new Vector2u(256 * 2, 240 * 2);
+            if (handle == IntPtr.Zero) {
+                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
+                rw.Size = new Vector2u(256 * 2, 240 * 2);
+            } else {
+                rw = new RenderWindow(handle);
+                rw.SetView(new View(new FloatRect(0, 0, 256, 240)));
+            }
 
             // Create render texture
             Texture im = new Texture(256, 240);
-            Sprite s = new Sprite(im);
+            s = new Sprite(im);
             s.TextureRect = new IntRect(0, 0, 256, 240);
 
             // Create PPU
@@ -77,7 +123,7 @@ namespace NesSharp {
 
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\OneDrive - Universiteit Utrecht\\Uni\\nessharp\\NesSharpTests\\roms\\ppu_vbl_nmi\\rom_singles\\10-even_odd_timing.nes");
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\Donkey Kong (World) (Rev A).nes");
-            Cartridge cart = RomParser.Parse("NesSharpTests/roms/raw.nes");
+            Cartridge cart = RomParser.Parse("/home/astavie/Downloads/dk.nes");
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\color_test.nes");
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\blargg_ppu_tests_2005.09.15b\\palette_ram.nes");
             Console.WriteLine(cart.rombytes.Length);
@@ -94,21 +140,28 @@ namespace NesSharp {
             {
                 ppubus.Write((ushort)i, cart.vrombytes[i]);                
             }
+        }
 
-            
+        public static void Main(string[] args)
+        {
+            Emulator emulator = new Emulator();
+            emulator.Setup(IntPtr.Zero);
+
             Clock c = new Clock();
             // Run Emulator
             while (true)
             {
-                bus.RunFrame();
+                // Application.Instance.RunIteration();
 
-                rw.DispatchEvents();
-                rw.Clear();
+                emulator.bus.RunFrame();
 
-                rw.Draw(s);
-                rw.Display();
+                emulator.rw.DispatchEvents();
+                emulator.rw.Clear();
+
+                emulator.rw.Draw(emulator.s);
+                emulator.rw.Display();
                 
-                // Console.WriteLine(1/c.ElapsedTime.AsSeconds());
+                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
         }

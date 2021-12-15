@@ -77,7 +77,8 @@ namespace NesSharp
 
         static CPU() {
             // Fill with jam
-            Array.Fill(instructions, new Instruction("JAM", AddressingMode.IMP, false, new Cycle[] { Jam }, false, true));
+            Instruction jam = new Instruction("JAM", AddressingMode.IMP, false, new Cycle[] { Jam }, false, true);
+            for (int i = 0; i < 256; i++) instructions[i] = jam;
 
             // Generate instructions
             for (int i = 0; i < 256; i++) {
