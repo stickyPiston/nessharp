@@ -3,7 +3,7 @@ using SFML.Graphics;
 
 namespace NesSharp.PPU
 {
-    public class PPUPalettes : IAddressable
+    public class PPUPalettes
     {
         public byte background;
         public Palette[] Backgrounds = new Palette[4];

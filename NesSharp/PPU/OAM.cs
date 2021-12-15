@@ -1,6 +1,6 @@
 ﻿namespace NesSharp.PPU
 {
-    class OAM : IAddressable
+    class OAM
     {
         public Sprite[] Sprites;
 

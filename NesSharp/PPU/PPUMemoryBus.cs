@@ -1,6 +1,6 @@
 ﻿namespace NesSharp.PPU
 {
-    public class PPUMemoryBus : IAddressable
+    public class PPUMemoryBus
     {
         public IAddressable Patterntables;
         public IAddressable Nametables;
@@ -11,11 +11,11 @@
         {
             if (addr < 0x2000)
             {
-                return Patterntables.Read(addr);
+                return Patterntables.Read(addr).Item1;
             }
             if (addr < 0x3f00)
             {
-                return Nametables.Read((ushort)((addr - 0x2000) % 0x1000));
+                return Nametables.Read((ushort)((addr - 0x2000) % 0x1000)).Item1;
             }
             if (addr <= 0x3fff)
             {

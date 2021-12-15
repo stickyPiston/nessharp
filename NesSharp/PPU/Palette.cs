@@ -4,7 +4,7 @@ using SFML.Graphics;
 
 namespace NesSharp.PPU
 {
-    public class Palette : IAddressable
+    public class Palette
     {
         public static readonly Color[] BasicColors =
         {

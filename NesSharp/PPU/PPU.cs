@@ -598,7 +598,7 @@ namespace NesSharp.PPU
             return bus.Read(addr);
         }
 
-        public byte Read(ushort addr)
+        public (byte, byte) Read(ushort addr)
         {
             // Console.WriteLine($"PPU Read: ${addr:x4}");
 
@@ -613,13 +613,13 @@ namespace NesSharp.PPU
                     status.VblankStarted = false;
                     MainBus.HighNMI();
                     w = false;
-                    return val;
+                    return (val, 0xFF);
                 }
                 case 0x2007:
                 {
                     byte val = bus.Read(v);
                     v += control.VramAddrInc;
-                    return val;
+                    return (val, 0xFF);
                 }
                 default:
                     throw new NotImplementedException($"Could not read {addr:x4}");

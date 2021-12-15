@@ -12,8 +12,8 @@ namespace NesSharpTests {
             bus.Write(0x120, 0x10);   
         }
 
-        public byte Read(ushort addr) {
-            return (addr == 0x12) ? (byte)0x20 : (byte)0x00;
+        public (byte, byte) Read(ushort addr) {
+            return ((addr == 0x12) ? (byte)0x20 : (byte)0x00, 0xFF);
         }
         public void Write(ushort _, byte __) { }
     }
@@ -31,7 +31,7 @@ namespace NesSharpTests {
 
         public byte exec() { return bus.Read(0x12); }
 
-        public byte Read(ushort _) { return 0; }
+        public (byte, byte) Read(ushort _) { return (0, 0); }
     }
 
     public class Tests {

@@ -43,7 +43,7 @@ namespace NesSharp.PPU
         }
     }
     
-    struct Sprite : IAddressable
+    struct Sprite
     {
         public byte Y;
         public byte index;

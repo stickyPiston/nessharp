@@ -35,16 +35,16 @@ namespace NesSharp
             cartridge.mapperType = (bytes[6] & 0xF0) >> 4;
 
             cartridge.consoleType = (bytes[7] & 1) > 0 ? ConsoleType.VSYS : ConsoleType.NES;
-            if ((bytes[7] & 0xE) != 0) { throw new Exception("Byte is set in reserved space"); };
+            /* if ((bytes[7] & 0xE) != 0) { throw new Exception("Byte is set in reserved space"); }; */
 
             cartridge.mapperType |= bytes[7] & 0xF0;
             cartridge.rambanks = bytes[8] > 0 ? bytes[8] : 1;
 
             cartridge.timingType = (bytes[9] & 1) > 0 ? TimingType.PAL : TimingType.NTSC;
 
-            if ((bytes[9] & 0xFE) != 0) { throw new Exception("Byte is set in reserved space"); };
+            /* if ((bytes[9] & 0xFE) != 0) { throw new Exception("Byte is set in reserved space"); }; */
 
-            if (bytes.Skip(10).Take(5).Aggregate(0, (a, x) => a + x) > 0) { throw new Exception("Byte is set in reserved space"); };
+            /* if (bytes.Skip(10).Take(5).Aggregate(0, (a, x) => a + x) > 0) { throw new Exception("Byte is set in reserved space"); }; */
 
             int romsize = 16 * 1024 * cartridge.rombanks, vromsize = 8 * 1024 * cartridge.vrombanks;
 

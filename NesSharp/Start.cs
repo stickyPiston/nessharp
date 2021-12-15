@@ -20,9 +20,9 @@ namespace NesSharp {
             rand.NextBytes(Bytes);
         }
 
-        public byte Read(ushort addr)
+        public (byte, byte) Read(ushort addr)
         {
-            return Bytes[addr];
+            return (Bytes[addr], 0xFF);
         }
 
         public void Write(ushort addr, byte data)
@@ -77,7 +77,7 @@ namespace NesSharp {
 
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\OneDrive - Universiteit Utrecht\\Uni\\nessharp\\NesSharpTests\\roms\\ppu_vbl_nmi\\rom_singles\\10-even_odd_timing.nes");
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\Donkey Kong (World) (Rev A).nes");
-            Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\Super Mario Bros. (World).nes");
+            Cartridge cart = RomParser.Parse("NesSharpTests/roms/raw.nes");
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\color_test.nes");
             // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\blargg_ppu_tests_2005.09.15b\\palette_ram.nes");
             Console.WriteLine(cart.rombytes.Length);

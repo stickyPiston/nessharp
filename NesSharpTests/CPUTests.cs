@@ -2,18 +2,20 @@ using NUnit.Framework;
 using System;
 using System.IO;
 using NesSharp;
+using Range = NesSharp.Range;
 
 namespace NesSharpTests
 {
     public class CPUTests
     {
-        private IAddressable bus;
+        private Bus bus;
         private CPU cpu;
 
         [SetUp]
         public void Setup()
         {
-            bus = new RAM(65536);
+            bus = new Bus();
+            bus.Register(new RAM(65536), new Range[] { new Range(0, 0xFFFF) });
             cpu = new CPU(bus);
         }
 

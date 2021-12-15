@@ -8,7 +8,7 @@ namespace NesSharp
     {
         Keyboard.Key[] Keymap1 = new Keyboard.Key []{ Key.Q, Key.E, Key.Escape, Key.Space, Key.W, Key.S, Key.A, Key.D };
         Keyboard.Key[] Keymap2 = new Keyboard.Key []{ Key.U, Key.O, Key.Escape, Key.Space, Key.I, Key.K, Key.J, Key.L };
-        uint number;
+        uint number, counter;
 
         public Controller(uint number)
         {
@@ -23,13 +23,16 @@ namespace NesSharp
             {
                 register = (byte)((register << 1) | (IsKeyPressed(key) ? 1 : 0));
             }
+            counter = 8;
         }
 
-        public override byte Read()
+        public override (byte, byte) Read()
         {
+            if (counter == 0) return (1, 1);
+            register = rol(register);
             byte Bit = (byte)(register & 0x1);
-            ror(ref register);
-            return Bit;
+            counter--;
+            return (Bit, 0x1);
         }
     }
 }

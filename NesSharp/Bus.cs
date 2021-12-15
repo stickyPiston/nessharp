@@ -24,7 +24,7 @@ namespace NesSharp {
             this.repeat = repeat;
         }
 
-        public byte Read(ushort addr) {
+        public (byte, byte) Read(ushort addr) {
             return parent.Read((ushort)((addr - start) % repeat + start));
         }
 
@@ -33,13 +33,14 @@ namespace NesSharp {
         }
     }
 
-    public class Bus : IAddressable {
+    public class Bus {
         private CPU cpu;
         private PPU.PPU ppu;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
         private byte clock = 0;
+        private byte open = 0;
 
         private int OAMDMACycles = 0;
         private byte OAMDATA = 0;
@@ -136,11 +137,12 @@ namespace NesSharp {
             {
                 if(addr >= range.Key.start && addr <= range.Key.end)
                 {
-                    return range.Value.Read(addr);
+                    (byte read, byte setbits) = range.Value.Read(addr);
+                    open = (byte) (read | (~setbits & open));
+                    return open;
                 }
             }
-            throw new Exception($"Can't read from {addr:x4}");
-
+            return open;
         }
 
         public void Write(ushort addr, byte data) {
