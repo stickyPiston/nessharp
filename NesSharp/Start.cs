@@ -12,6 +12,7 @@ using Eto.Drawing;
 using Drawable = Eto.Forms.Drawable;
 
 namespace NesSharp {
+
     public class RandomRam : IAddressable
     {
         public byte[] Bytes;
@@ -36,37 +37,76 @@ namespace NesSharp {
 
     public class MainForm : Form
     {
-        public Drawable panel; 
+        private Control panel;
+        private Emulator emulator;
+        private Thread emuThread;
+        private bool running;
+        private Func<IntPtr, IntPtr> handleGetter;
+        private IntPtr handle;
 
-        public MainForm() {
+        public MainForm(Func<IntPtr, IntPtr> handleGetter) {
+            this.handleGetter = handleGetter;
+
             Title = "NES#";
             ClientSize = new Size(256 * 2, 240 * 2);
-            Resizable = false;
-            Content = panel = new Drawable();
+            // Resizable = false;
+            Content = panel = new Panel();
 
             this.Menu = new MenuBar();
-            MenuItem item = new ButtonMenuItem { Text = "File" };
+            ButtonMenuItem item = new ButtonMenuItem { Text = "File" };
+            item.Items.Add(new ButtonMenuItem(Open) { Text = "Open..." });
+            item.Items.Add(new ButtonMenuItem(Close) { Text = "Close" });
             this.Menu.Items.Add(item);
+            
+            emulator = new Emulator();
+
+            Shown += WhenShown;
+            Closed += WhenClosed;
         }
 
-        public void Loop(IntPtr handle) {
-            Emulator emulator = new Emulator();
-            emulator.Setup(handle);
+        public void WhenShown(object o, EventArgs e) {
+            handle = handleGetter(panel.NativeHandle);
+        }
+
+        public void WhenClosed(object o, EventArgs e) {
+            if (running) {
+                running = false;
+                emuThread.Join();
+            }
+        }
+
+        public void Open(object o, EventArgs e) {
+            var dialog = new OpenFileDialog();
+            if (dialog.ShowDialog(this) == DialogResult.Ok) {
+                if (!running) {
+                    running = true;
+                    emuThread = new Thread(() => Run(dialog.FileName));
+                    emuThread.Start();
+                } else lock (emulator) {
+                    emulator.SetupCartridge(dialog.FileName);
+                }
+            }
+        }
+
+        public void Close(object o, EventArgs e) {
+            if (running) {
+                running = false;
+                emuThread.Join();
+            }
+        }
+
+        public void Run(string file) {
+            emulator.SetupScreen(handle);
+            emulator.SetupCartridge(file);
 
             Clock c = new Clock();
             // Run Emulator
-            while (Visible)
+            while (running)
             {
-                Application.Instance.RunIteration();
+                lock (emulator) {
+                    emulator.RunFrame();
+                }
 
-                emulator.bus.RunFrame();
-
-                emulator.rw.DispatchEvents();
-                emulator.rw.Clear();
-
-                emulator.rw.Draw(emulator.s);
-                emulator.rw.Display();
-                
                 Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
@@ -75,11 +115,38 @@ namespace NesSharp {
 
     public class Emulator
     {
-        public RenderWindow rw;
-        public Sprite s;
-        public Bus bus;
+        private Texture im;
+        private RenderWindow rw;
+        private Sprite s;
+        private Bus bus;
 
-        public void Setup(IntPtr handle) {
+        public void RunFrame() {
+            bus.RunFrame();
+
+            rw.DispatchEvents();
+            rw.Clear();
+
+            rw.Draw(s);
+            rw.Display();
+        }
+
+        public void SetupScreen(IntPtr handle) {
+            // Create window
+            if (handle == IntPtr.Zero) {
+                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
+                rw.Size = new Vector2u(256 * 2, 240 * 2);
+            } else {
+                rw = new RenderWindow(handle);
+                rw.SetView(new View(new FloatRect(0, 0, 256, 240)));
+            }
+
+            // Create render texture
+            im = new Texture(256, 240);
+            s = new Sprite(im);
+            s.TextureRect = new IntRect(0, 0, 256, 240);
+        }
+
+        public void SetupCartridge(string file) {
             // Create Bus, CPU, and ControllerPort
             bus = new Bus();
             var cpu = new CPU(bus);
@@ -92,20 +159,6 @@ namespace NesSharp {
             bus.Register(cpu);
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            
-            // Create window
-            if (handle == IntPtr.Zero) {
-                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
-                rw.Size = new Vector2u(256 * 2, 240 * 2);
-            } else {
-                rw = new RenderWindow(handle);
-                rw.SetView(new View(new FloatRect(0, 0, 256, 240)));
-            }
-
-            // Create render texture
-            Texture im = new Texture(256, 240);
-            s = new Sprite(im);
-            s.TextureRect = new IntRect(0, 0, 256, 240);
-
             // Create PPU
             PPU.PPU ppu = new PPU.PPU(im, bus);
             PPUMemoryBus ppubus = ppu.bus;
@@ -120,17 +173,9 @@ namespace NesSharp {
             bus.Register(ram, new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)});
             bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0x800, 0x1fff)});
             
-            // Enable rendering
-            // ppu.Write(0x2001, 0x18);
-            
-            byte x = 0; // Scrolling test
-
-            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\OneDrive - Universiteit Utrecht\\Uni\\nessharp\\NesSharpTests\\roms\\ppu_vbl_nmi\\rom_singles\\10-even_odd_timing.nes");
-            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\Donkey Kong (World) (Rev A).nes");
-            Cartridge cart = RomParser.Parse("/home/astavie/Downloads/dk.nes");
-            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\color_test.nes");
-            // Cartridge cart = RomParser.Parse("C:\\Users\\maxva\\Downloads\\blargg_ppu_tests_2005.09.15b\\palette_ram.nes");
+            Cartridge cart = RomParser.Parse(file);
             Console.WriteLine(cart.rombytes.Length);
+
             for (int i = 0; i < cart.rombytes.Length; i++)
             {
                 bus.Write((ushort)(0x8000 + i), cart.rombytes[i]);
@@ -149,22 +194,14 @@ namespace NesSharp {
         public static void Main(string[] args)
         {
             Emulator emulator = new Emulator();
-            emulator.Setup(IntPtr.Zero);
+            emulator.SetupScreen(IntPtr.Zero);
+            emulator.SetupCartridge("/home/astavie/Downloads/dk.nes");
 
             Clock c = new Clock();
             // Run Emulator
             while (true)
             {
-                // Application.Instance.RunIteration();
-
-                emulator.bus.RunFrame();
-
-                emulator.rw.DispatchEvents();
-                emulator.rw.Clear();
-
-                emulator.rw.Draw(emulator.s);
-                emulator.rw.Display();
-                
+                emulator.RunFrame();                
                 Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }

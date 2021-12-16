@@ -8,10 +8,7 @@ namespace NesSharp.Mac
 		[STAThread]
 		public static void Main(string[] args)
 		{
-            Application application = new Application(Eto.Platforms.Mac64);
-            MainForm form = new MainForm();
-            form.Show();
-            form.Loop(form.panel.NativeHandle);
+            new Application(Eto.Platforms.Mac64).Run(new MainForm(ptr => ptr));
 		}
 	}
 }

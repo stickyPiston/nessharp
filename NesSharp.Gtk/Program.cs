@@ -17,13 +17,14 @@ namespace NesSharp.Gtk
         [DllImport(LIB)]
         static extern IntPtr gtk_widget_get_window(IntPtr widget);
 
+        private static IntPtr GetXID(IntPtr widget) {
+            return gdk_x11_window_get_xid(gtk_widget_get_window(widget));
+        }
+
 		[STAThread]
 		public static void Main(string[] args)
 		{
-            Application application = new Application(Eto.Platforms.Gtk);
-            MainForm form = new MainForm();
-            form.Show();
-            form.Loop(gdk_x11_window_get_xid(gtk_widget_get_window(form.panel.NativeHandle)));
+            new Application(Eto.Platforms.Gtk).Run(new MainForm(GetXID));
 		}
 	}
 }
