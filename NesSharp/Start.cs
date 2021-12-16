@@ -78,8 +78,10 @@ namespace NesSharp {
         }
 
         public void WhenShown(object o, EventArgs e) {
-            handle = handleGetter(panel.NativeHandle);
-            emulator.SetupScreen(handle);
+            lock (emulator) {
+                handle = handleGetter(panel.NativeHandle);
+                emulator.SetupScreen(handle);
+            }
         }
 
         public void WhenClosed(object o, EventArgs e) {

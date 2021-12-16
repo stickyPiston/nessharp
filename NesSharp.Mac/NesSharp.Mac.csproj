@@ -13,7 +13,7 @@
 	
   <ItemGroup>
     <PackageReference Include="Eto.Forms" Version="2.6.0" />
-    <PackageReference Include="Eto.Platform.Mac64" Version="2.6.0" />
+    <PackageReference Include="Eto.Platform.Gtk" Version="2.6.0" />
   </ItemGroup>
 	
 </Project>
