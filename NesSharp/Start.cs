@@ -49,7 +49,7 @@ namespace NesSharp {
 
             Title = "NES#";
             ClientSize = new Size(256 * 2, 240 * 2);
-            // Resizable = false;
+            Resizable = false;
             Content = panel = new Panel();
 
             this.Menu = new MenuBar();
@@ -64,47 +64,56 @@ namespace NesSharp {
             Closed += WhenClosed;
         }
 
+        public static void Start(string platform, Func<IntPtr, IntPtr> handleGetter) {
+            new Application(platform).Run(new MainForm(handleGetter));
+
+                /* MainForm form = new MainForm(handleGetter); */
+                /* form.Owner = a.MainForm; */
+                /* form.Show(); */
+
+                /* while (form.Visible) { */
+                /*     a.RunIteration(); */
+                /*     lock(form.emulator) { form.emulator.Render(); } */
+                /* } */
+        }
+
         public void WhenShown(object o, EventArgs e) {
             handle = handleGetter(panel.NativeHandle);
+            emulator.SetupScreen(handle);
         }
 
         public void WhenClosed(object o, EventArgs e) {
-            if (running) {
-                running = false;
-                emuThread.Join();
-            }
+            running = false;
         }
 
         public void Open(object o, EventArgs e) {
             var dialog = new OpenFileDialog();
             if (dialog.ShowDialog(this) == DialogResult.Ok) {
-                if (!running) {
-                    running = true;
-                    emuThread = new Thread(() => Run(dialog.FileName));
-                    emuThread.Start();
-                } else lock (emulator) {
-                    emulator.SetupCartridge(dialog.FileName);
+                lock (emulator) {
+                    if (!running) {
+                        emulator.SetupCartridge(dialog.FileName);
+                        running = true;
+                        emuThread = new Thread(Run);
+                        emuThread.Start();
+                    } else {
+                        emulator.SetupCartridge(dialog.FileName);
+                    }
                 }
             }
         }
 
         public void Close(object o, EventArgs e) {
-            if (running) {
-                running = false;
-                emuThread.Join();
-            }
+            running = false;
         }
 
-        public void Run(string file) {
-            emulator.SetupScreen(handle);
-            emulator.SetupCartridge(file);
-
+        public void Run() {
             Clock c = new Clock();
             // Run Emulator
             while (running)
             {
                 lock (emulator) {
                     emulator.RunFrame();
+                    Application.Instance.Invoke(emulator.Render);
                 }
 
                 Console.WriteLine(1/c.ElapsedTime.AsSeconds());
@@ -120,14 +129,15 @@ namespace NesSharp {
         private Sprite s;
         private Bus bus;
 
-        public void RunFrame() {
-            bus.RunFrame();
-
+        public void Render() {
             rw.DispatchEvents();
             rw.Clear();
-
             rw.Draw(s);
             rw.Display();
+        }
+
+        public void RunFrame() {
+            bus.RunFrame();
         }
 
         public void SetupScreen(IntPtr handle) {

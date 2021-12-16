@@ -8,7 +8,7 @@ namespace NesSharp.Mac
 		[STAThread]
 		public static void Main(string[] args)
 		{
-            new Application(Eto.Platforms.Mac64).Run(new MainForm(ptr => ptr));
+            MainForm.Start(Eto.Platforms.Mac64, ptr => ptr);
 		}
 	}
 }

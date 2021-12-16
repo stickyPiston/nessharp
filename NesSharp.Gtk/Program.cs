@@ -24,7 +24,7 @@ namespace NesSharp.Gtk
 		[STAThread]
 		public static void Main(string[] args)
 		{
-            new Application(Eto.Platforms.Gtk).Run(new MainForm(GetXID));
+            MainForm.Start(Eto.Platforms.Gtk, GetXID);
 		}
 	}
 }
