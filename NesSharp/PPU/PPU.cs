@@ -116,7 +116,10 @@ namespace NesSharp.PPU
 
             if (scanline <= 239 && 1 <= pixel && pixel <= 256)
             {
-                if (mask.ShowBackground && mask.ShowSprites)
+                bool renderBack = mask.ShowBackground && (mask.BackgroundOnLeft8 || pixel > 8);
+                bool renderSprite = mask.ShowSprites && (mask.SpritesOnLeft8 || pixel > 8);
+                
+                if (renderBack && renderSprite)
                 {
                     int backgroundColorIndex = (((PatternTableShift1 << x) & 0x8000) >> 15) |
                                                (((PatternTableShift2 << x) & 0x8000) >> 14);
@@ -155,42 +158,21 @@ namespace NesSharp.PPU
                             }
                             else
                             {
-                                if (i == 0 && backgroundColorIndex != 0 && isRenderingSpriteZero && pixel != 256)
-                                    status.Sprite0Hit = true;
                                 color = bus.Palettes.Sprites[spriteAttributeLatches[i].Palette][spriteColorIndex - 1];
                                 // color = Color.Red;
                             }
+                            if (i == 0 && spriteColorIndex != 0 && backgroundColorIndex != 0 && isRenderingSpriteZero && pixel != 256)
+                                status.Sprite0Hit = true;
                             if(spriteColorIndex != 0)
                                 break;
 
-                        }
-                    }
-                    for (int i = 0; i < 8; i++)
-                    {
-                        if (RenderingStatuses[i] == SpriteRenderingStatus.Rendering)
-                        {
-                            SpriteRenderingCounters[i]++;
-                            if (SpriteRenderingCounters[i] == 8)
-                            {
-                                RenderingStatuses[i] = SpriteRenderingStatus.Done;
-                            }
-                        }
-
-                        if (spriteXCounters[i] > 0)
-                        {
-                            spriteXCounters[i]--;
-                            if (spriteXCounters[i] == 0)
-                            {
-                                RenderingStatuses[i] = SpriteRenderingStatus.Rendering;
-                                // SpriteRenderingCounters[i] = 0;
-                            }
                         }
                     }
 
                     
                     currentFrame.SetPixel(pixel - 1, scanline, color);
                 }
-                else if (mask.ShowBackground)
+                else if (renderBack)
                 {
                     int colorIndex = (((PatternTableShift1 << x) & 0x8000) >> 15) |
                                      (((PatternTableShift2 << x) & 0x8000) >> 14);
@@ -202,24 +184,8 @@ namespace NesSharp.PPU
                             ? Palette.BasicColors[bus.Palettes.background]
                             : bus.Palettes.Backgrounds[paletteIndex][colorIndex - 1]);
                 }
-                else if (mask.ShowSprites)
+                else if (renderSprite)
                 {
-                    for (int i = 0; i < 8; i++)
-                    {
-                        if (RenderingStatuses[i] == SpriteRenderingStatus.Rendering)
-                        {
-                            SpriteRenderingCounters[i]++;
-                            if (SpriteRenderingCounters[i] == 8)
-                            {
-                                RenderingStatuses[i] = SpriteRenderingStatus.Done;
-                            }
-                        }
-
-                        if (spriteXCounters[i] > 0)
-                            spriteXCounters[i]--;
-                        if (spriteXCounters[i] == 0)
-                            RenderingStatuses[i] = SpriteRenderingStatus.Rendering;
-                    }
 
                     for (int i = 0; i < 8; i++)
                     {
@@ -253,6 +219,29 @@ namespace NesSharp.PPU
                         }
                     }
                 }
+                
+                if (mask.ShowSprites)
+                    for (int i = 0; i < 8; i++)
+                    {
+                        if (RenderingStatuses[i] == SpriteRenderingStatus.Rendering)
+                        {
+                            SpriteRenderingCounters[i]++;
+                            if (SpriteRenderingCounters[i] == 8)
+                            {
+                                RenderingStatuses[i] = SpriteRenderingStatus.Done;
+                            }
+                        }
+
+                        if (spriteXCounters[i] > 0)
+                        {
+                            spriteXCounters[i]--;
+                            if (spriteXCounters[i] == 0)
+                            {
+                                RenderingStatuses[i] = SpriteRenderingStatus.Rendering;
+                                // SpriteRenderingCounters[i] = 0;
+                            }
+                        }
+                    }
             }
             
             if (mask.ShowBackground)
@@ -406,7 +395,7 @@ namespace NesSharp.PPU
                         case 7:
                             ushort spritePatternAddress;
                             uint y = spriteAttributeLatches[SpriteIndex].VerticalFlip == SpriteFlip.Flipped
-                                ? 8 - (scanline - secondaryOam.Sprites[SpriteIndex].Y)
+                                ? 7 - (scanline - secondaryOam.Sprites[SpriteIndex].Y)
                                 : (scanline - secondaryOam.Sprites[SpriteIndex].Y);
 
                             if (control.SpriteSize == SpriteSize._8x8)
