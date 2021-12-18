@@ -88,7 +88,6 @@ namespace NesSharp.PPU
             }
         }
 
-        private byte oamAddr = 0;
         private byte secOamAddr = 0;
         private bool secOamFull;
         private bool oamAddrOverflow;
@@ -99,8 +98,6 @@ namespace NesSharp.PPU
 
         public void Cycle()
         {
-            
-
             if (mask.ShowSprites)
             {
                 DoSpriteFetches();
@@ -122,13 +119,13 @@ namespace NesSharp.PPU
                     Color color = backgroundColorIndex == 0
                         ? Palette.BasicColors[bus.Palettes.background]
                         : bus.Palettes.Backgrounds[backgroundPaletteIndex][backgroundColorIndex - 1];
-                    
+
                     for (int i = 0; i < 8; i++)
                     {
                         if (spriteXCounters[i] == 0 && SpriteRenderingCounters[i] < 8)
                         {
                             int spriteColorIndex;
-                            if(spriteAttributeLatches[i].HorizontalFlip == SpriteFlip.NotFlipped)
+                            if (spriteAttributeLatches[i].HorizontalFlip == SpriteFlip.NotFlipped)
                             {
                                 var (b1, b2) = spritePatternShiftRegs[i];
                                 spriteColorIndex = (((b1 << SpriteRenderingCounters[i]) & 0x80) >> 7) |
@@ -140,8 +137,10 @@ namespace NesSharp.PPU
                                 spriteColorIndex = (((b1 >> SpriteRenderingCounters[i]) & 1)) |
                                                    (((b2 >> SpriteRenderingCounters[i]) & 1) << 1);
                             }
+
                             if (spriteColorIndex == 0 ||
-                                (spriteAttributeLatches[i].Priority == SpritePriority.BehindBackground && backgroundColorIndex != 0))
+                                (spriteAttributeLatches[i].Priority == SpritePriority.BehindBackground &&
+                                 backgroundColorIndex != 0))
                             {
                                 color = backgroundColorIndex == 0
                                     ? Palette.BasicColors[bus.Palettes.background]
@@ -154,17 +153,18 @@ namespace NesSharp.PPU
                                 // color = Color.Red;
                             }
 
-                            if (i == 0 && spriteColorIndex != 0 && backgroundColorIndex != 0 && isRenderingSpriteZero && pixel != 256) {
+                            if (i == 0 && spriteColorIndex != 0 && backgroundColorIndex != 0 && isRenderingSpriteZero &&
+                                pixel != 256)
+                            {
                                 status.Sprite0Hit = true;
-                                if (pixel > 8) Console.WriteLine(oam.Read(3));
                             }
-                            if(spriteColorIndex != 0)
-                                break;
 
+                            if (spriteColorIndex != 0)
+                                break;
                         }
                     }
 
-                    
+
                     currentFrame.SetPixel(pixel - 1, scanline, color);
                 }
                 else if (renderBack)
@@ -181,14 +181,13 @@ namespace NesSharp.PPU
                 }
                 else if (renderSprite)
                 {
-
                     for (int i = 0; i < 8; i++)
                     {
                         if (spriteXCounters[i] == 0 && SpriteRenderingCounters[i] < 8)
                         {
                             int spriteColorIndex;
                             Color color;
-                            if(spriteAttributeLatches[i].HorizontalFlip == SpriteFlip.NotFlipped)
+                            if (spriteAttributeLatches[i].HorizontalFlip == SpriteFlip.NotFlipped)
                             {
                                 var (b1, b2) = spritePatternShiftRegs[i];
                                 spriteColorIndex = (((b1 << SpriteRenderingCounters[i]) & 0x80) >> 7) |
@@ -200,6 +199,7 @@ namespace NesSharp.PPU
                                 spriteColorIndex = (((b1 >> SpriteRenderingCounters[i]) & 1)) |
                                                    (((b2 >> SpriteRenderingCounters[i]) & 1) << 1);
                             }
+
                             if (spriteColorIndex == 0)
                             {
                                 color = Palette.BasicColors[bus.Palettes.background];
@@ -214,8 +214,9 @@ namespace NesSharp.PPU
                         }
                     }
                 }
-                
-                if (mask.ShowSprites) {
+
+                if (mask.ShowSprites)
+                {
                     for (int i = 0; i < 8; i++)
                     {
                         if (spriteXCounters[i] == 0 && SpriteRenderingCounters[i] < 8)
@@ -230,7 +231,7 @@ namespace NesSharp.PPU
                     }
                 }
             }
-            
+
             if (mask.ShowBackground)
             {
                 if (scanline <= 239)
@@ -284,7 +285,7 @@ namespace NesSharp.PPU
                     }
                 }
             }
-            
+
             IncrementPixel();
         }
 
@@ -295,7 +296,6 @@ namespace NesSharp.PPU
                 if (pixel == 0)
                 {
                     SpriteIndex = 0;
-                    oamAddr = 0;
                     secOamAddr = 0;
                     secOamFull = false;
                     oamAddrOverflow = false;
@@ -318,49 +318,50 @@ namespace NesSharp.PPU
                 }
                 else if (pixel <= 256)
                 {
-
                     if (pixel % 2 == 1)
                     {
-                        tempSpriteByte = oam.Read(oamAddr);
+                        tempSpriteByte = oam.Read(OAMADDR);
                         return;
                     }
-                    
+
                     if (oamAddrOverflow)
                     {
                         return;
                     }
-                    
+
                     if (!secOamFull)
                     {
                         secondaryOam.Write(secOamAddr, tempSpriteByte);
-                        int y = secondaryOam.Read((ushort) (secOamAddr & 0x1c));
-                        bool inRange = scanline >= y && (scanline - y) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
+                        int y = secondaryOam.Read((ushort) (secOamAddr & 0xfc));
+                        bool inRange = scanline >= y &&
+                                       (scanline - y) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
+
                         if (inRange)
                         {
-                            if (oamAddr == 0) {
+                            if (OAMADDR == 0)
+                            {
                                 secondaryOamHasSpriteZero = true;
                             }
+
                             secOamAddr++;
-                            oamAddr++;
+                            OAMADDR++;
                         }
                         else
                         {
-                            oamAddr += 4;
+                            OAMADDR += 4;
                         }
                     }
-                    
-                    
-                    if (oamAddr == 0)
+
+
+                    if (OAMADDR == 0)
                     {
                         oamAddrOverflow = true;
                     }
-                    
+
                     if (secOamAddr >= 8 * 4)
                     {
                         secOamFull = true;
                     }
-
-                    
                 }
                 else if (pixel <= 320)
                 {
@@ -404,6 +405,19 @@ namespace NesSharp.PPU
                             SpriteIndex++;
                             break;
                     }
+                }
+            }
+
+            if (scanline == 261 && pixel == 0)
+            {
+                SpriteIndex = 0;
+                secOamAddr = 0;
+                secOamFull = false;
+                oamAddrOverflow = false;
+                secondaryOamHasSpriteZero = false;
+                for (int i = 0; i < 8; i++)
+                {
+                    SpriteRenderingCounters[i] = 0;
                 }
             }
 
@@ -484,8 +498,7 @@ namespace NesSharp.PPU
         private void EndVBlank()
         {
             status.VblankStarted = false;
-            status.Sprite0Hit = false;
-            status.SpriteOverflow = false;
+            isRenderingSpriteZero = false;
             MainBus.HighNMI();
         }
 
@@ -507,6 +520,12 @@ namespace NesSharp.PPU
                 StartVBlank();
             }
 
+            if (scanline == 261 && pixel == 1)
+            {
+                status.Sprite0Hit = false;
+                status.SpriteOverflow = false;
+            }
+            
             // Pixel 2 so that the CPU can still read the correct value
             if (scanline == 261 && pixel == 2)
             {

@@ -23,13 +23,13 @@ namespace NesSharp.PPU
             addr = (ushort)(addr - 0x3f00);
             int palNumber = (addr >> 2) & 0b11;
             ushort palSubAddr = (ushort)((addr-1) & 0b11);
-            if (addr == 0)
+            if (addr == 0 || addr == 0x10)
             {
                 return background;
             }
             else if ((addr & 0x10) == 0)
             {
-                return Backgrounds[palNumber].Read(palSubAddr);
+                return Backgrounds[palNumber].Read((ushort)(palSubAddr & 0xe7));
             }
             else
             {
@@ -42,13 +42,14 @@ namespace NesSharp.PPU
             addr = (ushort)(addr - 0x3f00);
             int palNumber = (addr >> 2) & 0b11;
             ushort palSubAddr = (ushort)((addr-1) & 0b11);
-            if (addr == 0)
+            if (addr == 0 || addr == 0x10)
             {
                 background = data;
+                Console.WriteLine($"background = ");
             }
             else if ((addr & 0x10) == 0)
             {
-                Backgrounds[palNumber].Write(palSubAddr, data);
+                Backgrounds[palNumber].Write((ushort)(palSubAddr & 0xe7), data);
             }
             else
             {

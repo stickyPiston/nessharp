@@ -164,7 +164,7 @@ namespace NesSharp {
             PPU.PPU ppu = new PPU.PPU(im, bus);
             PPUMemoryBus ppubus = ppu.bus;
             ppubus.Palettes = new PPUPalettes();
-            ppubus.Nametables = new RandomRam();
+            ppubus.Nametables = new Repeater(new RandomRam(), 0, 0x800);
             ppubus.Patterntables = new RandomRam();
 
             bus.Register(ppu);
