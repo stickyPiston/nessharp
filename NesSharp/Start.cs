@@ -133,7 +133,7 @@ namespace NesSharp {
         public void SetupScreen(IntPtr handle) {
             // Create window
             if (handle == IntPtr.Zero) {
-                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
+                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default | Styles.Resize);
                 rw.Size = new Vector2u(256 * 2, 240 * 2);
                 rw.Closed += Closed;
             } else {
@@ -196,7 +196,8 @@ namespace NesSharp {
         {
             Emulator emulator = new Emulator();
             emulator.SetupScreen(IntPtr.Zero);
-            emulator.SetupCartridge("/home/astavie/Downloads/dk.nes");
+            emulator.SetupCartridge("C:\\Users\\maxva\\Downloads\\Balloon Fight (USA).nes");
+            // emulator.SetupCartridge("C:\\Users\\maxva\\Downloads\\Donkey Kong (World) (Rev A).nes");
 
             Clock c = new Clock();
             // Run Emulator

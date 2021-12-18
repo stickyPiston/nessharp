@@ -57,7 +57,7 @@ namespace NesSharp {
 
         public void BeginOAM(ushort DMACopyAddr) {
             OAMDMACycles = clock < 3 ? 514 : 513;
-            this.DMACopyAddr = DMACopyAddr;
+            this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
 
         public void Tick() {
@@ -70,7 +70,7 @@ namespace NesSharp {
                     int cycle = 512 - OAMDMACycles;
                     switch (cycle & 1) {
                         case 0:
-                            OAMDATA = Read((ushort) (DMACopyAddr | (cycle >> 2)));
+                            OAMDATA = Read((ushort) (DMACopyAddr | (cycle >> 1)));
                             break;
                         case 1:
                             ppu.Write(0x2004, OAMDATA);
@@ -78,9 +78,9 @@ namespace NesSharp {
                     }
                 }
                 // Console.WriteLine(cpu.DumpCycle());
+            if (OAMDMACycles > 0) OAMDMACycles--;
             }
 
-            if (OAMDMACycles > 0) OAMDMACycles--;
             // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
             
 

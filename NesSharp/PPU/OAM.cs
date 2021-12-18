@@ -20,7 +20,7 @@
 
         public void Write(ushort addr, byte data)
         {
-            int index = addr / 4;
+            int index = addr >> 2;
             ushort offset = (ushort)(addr % 4);
 
             Sprites[index].Write(offset, data);

@@ -6,7 +6,7 @@ namespace NesSharp
 {
     public class Controller : InputDevice
     {
-        Keyboard.Key[] Keymap1 = new Keyboard.Key []{ Key.Q, Key.E, Key.Escape, Key.Space, Key.W, Key.S, Key.A, Key.D };
+        Keyboard.Key[] Keymap1 = new Keyboard.Key []{ Key.Z, Key.X, Key.RShift, Key.Enter, Key.Up, Key.Down, Key.Left, Key.Right };
         Keyboard.Key[] Keymap2 = new Keyboard.Key []{ Key.U, Key.O, Key.Escape, Key.Space, Key.I, Key.K, Key.J, Key.L };
         uint number, counter;
 
