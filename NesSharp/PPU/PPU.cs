@@ -41,6 +41,8 @@ namespace NesSharp.PPU
         private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
         private SpriteAttribute[] spriteAttributeLatches = new SpriteAttribute[8];
         private byte[] spriteXCounters = new byte[8];
+        private bool isRenderingSpriteZero;
+        private bool secondaryOamHasSpriteZero;
 
         private ushort DMACopyAddr;
 
@@ -105,60 +107,7 @@ namespace NesSharp.PPU
 
         public void Cycle()
         {
-            if (mask.ShowBackground)
-            {
-                if (scanline <= 239)
-                {
-                    // ShiftRegs();
-
-                    if (pixel == 0)
-                    {
-                    }
-                    else if (pixel >= 1 && pixel <= 256)
-                    {
-                        ShiftRegs();
-                        DoBackgroundFetches();
-                    }
-                    else if (pixel == 257)
-                    {
-                        // v = (ushort) ((v & ~0x081f) | (t & 0x081f));
-                        v = (ushort) ((v & ~0x041f) | (t & 0x041f));
-                    }
-                    else if (pixel >= 321 && pixel <= 336)
-                    {
-                        ShiftRegs();
-                        DoBackgroundFetches();
-                    }
-                    //throw new System.NotImplementedException();
-                }
-                else if (scanline == 261)
-                {
-                    if (pixel == 0)
-                    {
-                    }
-                    else if (pixel >= 1 && pixel <= 256)
-                    {
-                        // TODO
-                        ShiftRegs();
-                        DoBackgroundFetches();
-                    }
-                    else if (pixel == 257)
-                    {
-                        //hori(v) = hori(t)
-                        v = (ushort) ((v & ~0x041f) | (t & 0x041f));
-                    }
-                    else if (pixel >= 280 && pixel <= 304)
-                    {
-                        //vert(v) = vert(t)
-                        v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
-                    }
-                    else if (pixel >= 321 && pixel <= 336)
-                    {
-                        ShiftRegs();
-                        DoBackgroundFetches();
-                    }
-                }
-            }
+            
 
             if (mask.ShowSprites)
             {
@@ -174,27 +123,6 @@ namespace NesSharp.PPU
                     int backgroundPaletteIndex =
                         (((PaletteShift1 << x) & 0x80) >> 7) | (((PaletteShift2 << x) & 0x80) >> 6);
 
-                    for (int i = 0; i < 8; i++)
-                    {
-                        if (RenderingStatuses[i] == SpriteRenderingStatus.Rendering)
-                        {
-                            SpriteRenderingCounters[i]++;
-                            if (SpriteRenderingCounters[i] == 8)
-                            {
-                                RenderingStatuses[i] = SpriteRenderingStatus.Done;
-                            }
-                        }
-
-                        if (spriteXCounters[i] > 0)
-                        {
-                            spriteXCounters[i]--;
-                            if (spriteXCounters[i] == 0)
-                            {
-                                RenderingStatuses[i] = SpriteRenderingStatus.Rendering;
-                                // SpriteRenderingCounters[i] = 0;
-                            }
-                        }
-                    }
 
                     Color color = backgroundColorIndex == 0
                         ? Palette.BasicColors[bus.Palettes.background]
@@ -227,11 +155,35 @@ namespace NesSharp.PPU
                             }
                             else
                             {
+                                if (i == 0 && backgroundColorIndex != 0 && isRenderingSpriteZero && pixel != 256)
+                                    status.Sprite0Hit = true;
                                 color = bus.Palettes.Sprites[spriteAttributeLatches[i].Palette][spriteColorIndex - 1];
                                 // color = Color.Red;
                             }
+                            if(spriteColorIndex != 0)
+                                break;
 
-                            break;
+                        }
+                    }
+                    for (int i = 0; i < 8; i++)
+                    {
+                        if (RenderingStatuses[i] == SpriteRenderingStatus.Rendering)
+                        {
+                            SpriteRenderingCounters[i]++;
+                            if (SpriteRenderingCounters[i] == 8)
+                            {
+                                RenderingStatuses[i] = SpriteRenderingStatus.Done;
+                            }
+                        }
+
+                        if (spriteXCounters[i] > 0)
+                        {
+                            spriteXCounters[i]--;
+                            if (spriteXCounters[i] == 0)
+                            {
+                                RenderingStatuses[i] = SpriteRenderingStatus.Rendering;
+                                // SpriteRenderingCounters[i] = 0;
+                            }
                         }
                     }
 
@@ -275,16 +227,17 @@ namespace NesSharp.PPU
                         {
                             int spriteColorIndex;
                             Color color;
-                            if (spriteAttributeLatches[i].HorizontalFlip == SpriteFlip.NotFlipped){
+                            if(spriteAttributeLatches[i].HorizontalFlip == SpriteFlip.NotFlipped)
+                            {
                                 var (b1, b2) = spritePatternShiftRegs[i];
-                                spriteColorIndex = ((b1 & 0x80) >> 8) |
-                                                   ((b2 & 0x80) >> 7);
+                                spriteColorIndex = (((b1 << SpriteRenderingCounters[i]) & 0x80) >> 7) |
+                                                   (((b2 << SpriteRenderingCounters[i]) & 0x80) >> 6);
                             }
                             else
                             {
                                 var (b1, b2) = spritePatternShiftRegs[i];
-                                spriteColorIndex = ((b1 & 0x1) >> 8) |
-                                                   ((b2 & 0x1) >> 7);
+                                spriteColorIndex = (((b1 >> SpriteRenderingCounters[i]) & 1)) |
+                                                   (((b2 >> SpriteRenderingCounters[i]) & 1) << 1);
                             }
                             if (spriteColorIndex == 0)
                             {
@@ -301,7 +254,61 @@ namespace NesSharp.PPU
                     }
                 }
             }
+            
+            if (mask.ShowBackground)
+            {
+                if (scanline <= 239)
+                {
+                    // ShiftRegs();
 
+                    if (pixel == 0)
+                    {
+                    }
+                    else if (pixel >= 1 && pixel <= 256)
+                    {
+                        ShiftRegs();
+                        DoBackgroundFetches();
+                    }
+                    else if (pixel == 257)
+                    {
+                        // v = (ushort) ((v & ~0x081f) | (t & 0x081f));
+                        v = (ushort) ((v & ~0x041f) | (t & 0x041f));
+                    }
+                    else if (pixel >= 321 && pixel <= 336)
+                    {
+                        ShiftRegs();
+                        DoBackgroundFetches();
+                    }
+                    //throw new System.NotImplementedException();
+                }
+                else if (scanline == 261)
+                {
+                    if (pixel == 0)
+                    {
+                    }
+                    else if (pixel >= 1 && pixel <= 256)
+                    {
+                        ShiftRegs();
+                        DoBackgroundFetches();
+                    }
+                    else if (pixel == 257)
+                    {
+                        //hori(v) = hori(t)
+                        v = (ushort) ((v & ~0x041f) | (t & 0x041f));
+                    }
+                    else if (pixel >= 280 && pixel <= 304)
+                    {
+                        //vert(v) = vert(t)
+                        v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
+                    }
+                    else if (pixel >= 321 && pixel <= 336)
+                    {
+                        ShiftRegs();
+                        DoBackgroundFetches();
+                    }
+                }
+            }
+            
             IncrementPixel();
         }
 
@@ -316,6 +323,7 @@ namespace NesSharp.PPU
                     secOamAddr = 0;
                     secOamFull = false;
                     oamAddrOverflow = false;
+                    secondaryOamHasSpriteZero = false;
                     for (int i = 0; i < 8; i++)
                     {
                         RenderingStatuses[i] = SpriteRenderingStatus.Waiting;
@@ -335,27 +343,7 @@ namespace NesSharp.PPU
                 }
                 else if (pixel <= 256)
                 {
-                    // if (pixel == 80)
-                    // {
-                    //     int secOamIndex = 0;
-                    //     for (int i = 0; i < 64; i++)
-                    //     {
-                    //         bool inRange = scanline > oam.Sprites[i].Y && (scanline - oam.Sprites[i].Y) <
-                    //             (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
-                    //
-                    //         if (inRange)
-                    //         {
-                    //             secondaryOam.Sprites[secOamIndex] = oam.Sprites[i];
-                    //             secOamIndex++;
-                    //             if (secOamIndex == 8)
-                    //             {
-                    //                 break;
-                    //             }
-                    //         }
-                    //
-                    //     }
-                    // }
-                    
+
                     if (pixel % 2 == 1)
                     {
                         tempSpriteByte = oam.Read(oamAddr);
@@ -370,19 +358,21 @@ namespace NesSharp.PPU
                     if (!secOamFull)
                     {
                         secondaryOam.Write(secOamAddr, tempSpriteByte);
+                        int y = secondaryOam.Read((ushort) (secOamAddr & 0x1c));
+                        bool inRange = scanline >= y && (scanline - y) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
+                        if (inRange)
+                        {
+                            if (oamAddr == 0)
+                                secondaryOamHasSpriteZero = true;
+                            secOamAddr++;
+                            oamAddr++;
+                        }
+                        else
+                        {
+                            oamAddr += 4;
+                        }
                     }
                     
-                    int y = secondaryOam.Read((ushort) (secOamAddr & 0x1c));
-                    bool inRange = scanline >= y && (scanline - y) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
-                    if (inRange)
-                    {
-                        secOamAddr++;
-                        oamAddr++;
-                    }
-                    else
-                    {
-                        oamAddr += 4;
-                    }
                     
                     if (oamAddr == 0)
                     {
@@ -394,74 +384,7 @@ namespace NesSharp.PPU
                         secOamFull = true;
                     }
 
-                    //
-                    // if (oamAddrOverflow)
-                    // {
-                    //     unchecked
-                    //     {
-                    //         oamAddr += 4;
-                    //     }
-                    //
-                    //     return;
-                    // }
-                    //
-                    // bool inRange = (scanline - tempSpriteByte) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
-                    //
-                    // if (secOamFull)
-                    // {
-                    //     if (copySpriteDataCounter > 0)
-                    //     {
-                    //         oamAddr++;
-                    //         copySpriteDataCounter--;
-                    //         return;
-                    //     }
-                    //
-                    //     if (inRange)
-                    //     {
-                    //         copySpriteDataCounter = 3;
-                    //     }
-                    //     else
-                    //     {
-                    //         oamAddr = (byte) ((oamAddr & 0x11111100) + 4 + ((oamAddr + 1) & 0b11));
-                    //         if ((oamAddr & 0x11111100) == 0)
-                    //             oamAddrOverflow = true;
-                    //     }
-                    //
-                    //
-                    //     return;
-                    // }
-                    //
-                    // if (copySpriteDataCounter > 0)
-                    // {
-                    //     secondaryOam.Write(++secOamAddr, tempSpriteByte);
-                    //     copySpriteDataCounter--;
-                    //     oamAddr++;
-                    //
-                    //     if (secOamAddr == 8 * 4 - 1)
-                    //     {
-                    //         secOamFull = true;
-                    //     }
-                    //
-                    //     return;
-                    // }
-                    //
-                    //
-                    // if (inRange && !secOamFull && !oamAddrOverflow)
-                    // {
-                    //     copySpriteDataCounter = 3;
-                    //     oamAddr++;
-                    // }
-                    // else if (!oamAddrOverflow)
-                    // {
-                    //     //increment n
-                    //     unchecked
-                    //     {
-                    //         oamAddr += 4;
-                    //     }
-                    //
-                    //     if (oamAddr == 0)
-                    //         oamAddrOverflow = true;
-                    // }
+                    
                 }
                 else if (pixel <= 320)
                 {
@@ -501,6 +424,7 @@ namespace NesSharp.PPU
                                 throw new NotImplementedException();
                             }
                         case 0:
+                            isRenderingSpriteZero = secondaryOamHasSpriteZero;
                             SpriteIndex++;
                             break;
                     }
