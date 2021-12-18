@@ -7,7 +7,6 @@ namespace NesSharp.Gtk
 {
 	class Program
 	{
-
         public const string LIB = "libgtk-3.so.0";
         public const string LIB_GDK = "libgdk-3.so.0";
 
