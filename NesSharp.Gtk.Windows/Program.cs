@@ -1,6 +1,8 @@
 ﻿using System;
 using Eto.Forms;
 
+using System.Runtime.InteropServices;
+
 namespace NesSharp.Wpf
 {
 	class Program
