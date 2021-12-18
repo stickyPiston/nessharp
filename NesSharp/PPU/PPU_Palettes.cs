@@ -45,7 +45,6 @@ namespace NesSharp.PPU
             if (addr == 0 || addr == 0x10)
             {
                 background = data;
-                Console.WriteLine($"background = ");
             }
             else if ((addr & 0x10) == 0)
             {
