@@ -207,13 +207,14 @@ namespace NesSharp {
         {
             Emulator emulator = new Emulator();
             emulator.SetupScreen(IntPtr.Zero);
-            emulator.SetupCartridge("/home/astavie/Downloads/dk.nes");
+            emulator.SetupCartridge("C:\\Users\\maxva\\Downloads\\Balloon Fight (USA).nes");
 
             Clock c = new Clock();
             // Run Emulator
             while (true)
             {
-                emulator.RunFrame();                
+                emulator.RunFrame();
+                emulator.Render();
                 Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
