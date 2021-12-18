@@ -1,14 +1,16 @@
 ﻿using System;
 using Eto.Forms;
 
-namespace NesSharp.Wpf
+using System.Runtime.InteropServices;
+
+namespace NesSharp.Mac
 {
 	class Program
 	{
 		[STAThread]
 		public static void Main(string[] args)
 		{
-            MainForm.Start(Eto.Platforms.Wpf);
+            MainForm.Start(Eto.Platforms.Mac64);
 		}
 	}
 }
