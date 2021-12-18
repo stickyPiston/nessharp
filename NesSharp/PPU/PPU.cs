@@ -590,7 +590,7 @@ namespace NesSharp.PPU
 
         byte getTile()
         {
-            ushort addr = (ushort) (control.BaseNametableAddress | (v & 0x0fff));
+            ushort addr = (ushort) (0x2000 | (v & 0x0fff));
             return bus.Read(addr);
         }
 
@@ -620,7 +620,7 @@ namespace NesSharp.PPU
                 }
                 case 0x2007:
                 {
-                    byte val = bus.Read(v);
+                    byte val = bus.BufferedRead(v);
                     v += control.VramAddrInc;
                     return (val, 0xFF);
                 }

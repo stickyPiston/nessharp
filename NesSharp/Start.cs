@@ -183,12 +183,11 @@ namespace NesSharp {
                 if (cart.rombytes.Length == 0x4000)
                 {
                     bus.Write((ushort)(0xc000 + i), cart.rombytes[i]);
-
                 }
             }
             for (int i = 0; i < cart.vrombytes.Length; i++)
             {
-                ppubus.Write((ushort)i, cart.vrombytes[i]);                
+                ppubus.Write((ushort)i, cart.vrombytes[i]);      
             }
         }
 
