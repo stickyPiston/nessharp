@@ -1,15 +1,12 @@
-﻿using SFML.Audio;
-using SFML.Window;
+﻿using SFML.Window;
 using System;
 using System.Threading;
-using SFML.Window;
 using SFML.System;
 using SFML.Graphics;
 using NesSharp.PPU;
 using Sprite = SFML.Graphics.Sprite;
 using Eto.Forms;
 using Eto.Drawing;
-using Drawable = Eto.Forms.Drawable;
 
 namespace NesSharp {
 
@@ -46,9 +43,9 @@ namespace NesSharp {
 
         public MainForm() {
             Title = "NES#";
-            ClientSize = new Size(256 * 2, 240 * 2);
+            // ClientSize = new Size(256 * 2, 240 * 2);
             Resizable = false;
-            Content = panel = new Panel();
+            // Content = panel = new Panel();
 
             this.Menu = new MenuBar();
             ButtonMenuItem item = new ButtonMenuItem { Text = "File" };
@@ -72,6 +69,7 @@ namespace NesSharp {
                     Monitor.Exit(m_lock);
                 } else {
                     emulator = new Emulator();
+                    emulator.Closed += Close;
                     emulator.SetupScreen(IntPtr.Zero);
                     emulator.SetupCartridge(dialog.FileName);
                     running = true;
@@ -82,7 +80,12 @@ namespace NesSharp {
         }
 
         public void Close(object o, EventArgs e) {
-            running = false;
+            if (running) {
+                running = false;
+                emuThread.Join();
+                emulator.Close();
+                emulator = null;
+            }
         }
 
         public void Run() {
@@ -91,20 +94,14 @@ namespace NesSharp {
             while (running)
             {
                 Monitor.Enter(m_lock);
-                    emulator.RunFrame();
+                emulator.RunFrame();
                 Monitor.Exit(m_lock);
 
-                Application.Instance.Invoke(emulator.Render);
-                    
+                Application.Instance.InvokeAsync(() => { if (running) emulator.Render(); });
+                
                 Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
-
-            // Exit
-            Application.Instance.Invoke(() => {
-                emulator.Close();
-                emulator = null;
-            });
         }
 
     }
@@ -131,11 +128,14 @@ namespace NesSharp {
             rw.Close();
         }
 
+        public event EventHandler Closed;
+
         public void SetupScreen(IntPtr handle) {
             // Create window
             if (handle == IntPtr.Zero) {
                 rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
                 rw.Size = new Vector2u(256 * 2, 240 * 2);
+                rw.Closed += Closed;
             } else {
                 rw = new RenderWindow(handle);
                 rw.SetView(new View(new FloatRect(0, 0, 256, 240)));
