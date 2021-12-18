@@ -41,7 +41,7 @@
             }
             if (addr <= 0x3fff)
             {
-                return Palettes.Read((ushort)(0x3f00 + ((addr - 0x3f00) % 0xe0)));
+                return buffer = Palettes.Read((ushort)(0x3f00 + ((addr - 0x3f00) % 0xe0)));
             }
             throw new System.NotImplementedException();
         }
