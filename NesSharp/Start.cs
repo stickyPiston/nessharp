@@ -41,12 +41,10 @@ namespace NesSharp {
         private Emulator emulator;
         private Thread emuThread;
         private bool running;
-        private Func<IntPtr, IntPtr> handleGetter;
-        private IntPtr handle;
 
-        public MainForm(Func<IntPtr, IntPtr> handleGetter) {
-            this.handleGetter = handleGetter;
+        private readonly Object m_lock = new Object();
 
+        public MainForm() {
             Title = "NES#";
             ClientSize = new Size(256 * 2, 240 * 2);
             Resizable = false;
@@ -58,48 +56,27 @@ namespace NesSharp {
             item.Items.Add(new ButtonMenuItem(Close) { Text = "Close" });
             this.Menu.Items.Add(item);
             
-            emulator = new Emulator();
-
-            Shown += WhenShown;
-            Closed += WhenClosed;
+            Closed += Close;
         }
 
-        public static void Start(string platform, Func<IntPtr, IntPtr> handleGetter) {
-            new Application(platform).Run(new MainForm(handleGetter));
-
-                /* MainForm form = new MainForm(handleGetter); */
-                /* form.Owner = a.MainForm; */
-                /* form.Show(); */
-
-                /* while (form.Visible) { */
-                /*     a.RunIteration(); */
-                /*     lock(form.emulator) { form.emulator.Render(); } */
-                /* } */
-        }
-
-        public void WhenShown(object o, EventArgs e) {
-            lock (emulator) {
-                handle = handleGetter(panel.NativeHandle);
-                emulator.SetupScreen(handle);
-            }
-        }
-
-        public void WhenClosed(object o, EventArgs e) {
-            running = false;
+        public static void Start(string platform) {
+            new Application(platform).Run(new MainForm());
         }
 
         public void Open(object o, EventArgs e) {
             var dialog = new OpenFileDialog();
             if (dialog.ShowDialog(this) == DialogResult.Ok) {
-                lock (emulator) {
-                    if (!running) {
+                if (running) {
+                    Monitor.Enter(m_lock);
                         emulator.SetupCartridge(dialog.FileName);
-                        running = true;
-                        emuThread = new Thread(Run);
-                        emuThread.Start();
-                    } else {
-                        emulator.SetupCartridge(dialog.FileName);
-                    }
+                    Monitor.Exit(m_lock);
+                } else {
+                    emulator = new Emulator();
+                    emulator.SetupScreen(IntPtr.Zero);
+                    emulator.SetupCartridge(dialog.FileName);
+                    running = true;
+                    emuThread = new Thread(Run);
+                    emuThread.Start();
                 }
             }
         }
@@ -113,15 +90,23 @@ namespace NesSharp {
             // Run Emulator
             while (running)
             {
-                lock (emulator) {
+                Monitor.Enter(m_lock);
                     emulator.RunFrame();
-                    Application.Instance.Invoke(emulator.Render);
-                }
+                Monitor.Exit(m_lock);
 
+                Application.Instance.Invoke(emulator.Render);
+                    
                 Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
+
+            // Exit
+            Application.Instance.Invoke(() => {
+                emulator.Close();
+                emulator = null;
+            });
         }
+
     }
 
     public class Emulator
@@ -140,6 +125,10 @@ namespace NesSharp {
 
         public void RunFrame() {
             bus.RunFrame();
+        }
+
+        public void Close() {
+            rw.Close();
         }
 
         public void SetupScreen(IntPtr handle) {
