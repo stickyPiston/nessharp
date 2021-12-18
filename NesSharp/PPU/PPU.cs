@@ -673,7 +673,7 @@ namespace NesSharp.PPU
                     }
                     else
                     {
-                        t = (ushort) ((t & ~0xf3e0) | ((data & 0xf8) << 5) | ((data & 0x07) << 12));
+                        t = (ushort) ((t & ~0xf3e0) | ((data & 0xf8) << 2) | ((data & 0x07) << 12));
                     }
 
                     w = !w;
