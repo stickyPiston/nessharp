@@ -9,7 +9,7 @@ namespace NesSharp
     public partial class CPU
     {
         // Bus
-        private IAddressable bus;
+        private Bus bus;
         
         // Registers
         public ushort PC { get; private set; }
@@ -119,12 +119,15 @@ namespace NesSharp
         }
 
         private ISet<object> incomingIRQ = new HashSet<object>();
+
         private bool incomingNMI;
+        private bool prevIncomingNMI;
 
-        public HardwareInterrupt? pending  { get; private set; } // this cycle
-        public HardwareInterrupt? previous { get; private set; } // previous cycle
+        public HardwareInterrupt? polled { get; private set; } // next cycle
+        public HardwareInterrupt? prevpolled { get; private set; } // this cycle
+        public HardwareInterrupt? prevprevpolled { get; private set; } // last cycle
 
-        public CPU(IAddressable bus)
+        public CPU(Bus bus)
         {
             this.bus = bus;
 
@@ -141,9 +144,14 @@ namespace NesSharp
             this.cycle = 0;
         }
 
-        public void PullNMI()
+        public void LowNMI()
         {
             incomingNMI = true;
+        }
+
+        public void HighNMI()
+        {
+            incomingNMI = false;
         }
 
         public void HighIRQ(object sender)
@@ -162,26 +170,20 @@ namespace NesSharp
         }
 
         private void CycleEnd() {
-            previous = pending;
+            prevprevpolled = prevpolled;
+            prevpolled = polled;
 
-            // NMI stays pending until it is handled
-            if (pending != HardwareInterrupt.NMI)
-            {
-                // An incoming NMI interrupt has priority
-                if (incomingNMI)
-                {
-                    pending = HardwareInterrupt.NMI;
-                    incomingNMI = false;
-                }
-                else if (incomingIRQ.Count > 0 && P.I == 0)
-                {
-                    pending = HardwareInterrupt.IRQ;
-                }
-                else
-                {
-                    pending = null;
+            if (polled != HardwareInterrupt.NMI) {
+                if (!prevIncomingNMI && incomingNMI) {
+                    polled = HardwareInterrupt.NMI;
+                } else if (incomingIRQ.Count > 0 && P.I == 0) {
+                    polled = HardwareInterrupt.IRQ;
+                } else {
+                    polled = null;
                 }
             }
+
+            prevIncomingNMI = incomingNMI;
         }
 
         public int CycleInstruction() {
@@ -206,11 +208,11 @@ namespace NesSharp
             // Get next instruction
             if (instr.Cycles.Length <= cycle)
             {
-                if (pending != null)
+                if (prevpolled != null)
                 {
                     // Poll next interrupt
                     cycle = 0;
-                    SetInstruction(pending == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
+                    SetInstruction(prevpolled == HardwareInterrupt.NMI ? NMIInstruction : IRQInstruction);
                 }
                 else
                 {

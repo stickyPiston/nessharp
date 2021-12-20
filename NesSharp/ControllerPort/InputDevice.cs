@@ -5,7 +5,7 @@ namespace NesSharp
         public byte register = 0x0;
 
         public abstract void latchInput();
-        public abstract byte Read();
-        public byte ror(ref byte b) => b = (byte)((b >> 1) | ((b & 1) << 7));
+        public abstract (byte, byte) Read();
+        public byte rol(byte b) => (byte)((b << 1) | ((b & 0x80) >> 7));
     };
 };

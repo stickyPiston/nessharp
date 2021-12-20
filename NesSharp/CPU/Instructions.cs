@@ -77,7 +77,8 @@ namespace NesSharp
 
         static CPU() {
             // Fill with jam
-            Array.Fill(instructions, new Instruction("JAM", AddressingMode.IMP, false, new Cycle[] { Jam }, false, true));
+            Instruction jam = new Instruction("JAM", AddressingMode.IMP, false, new Cycle[] { Jam }, false, true);
+            for (int i = 0; i < 256; i++) instructions[i] = jam;
 
             // Generate instructions
             for (int i = 0; i < 256; i++) {
@@ -258,7 +259,7 @@ namespace NesSharp
             instructions[0xD0] = new Instruction("BNE rel",   AddressingMode.REL, false, new Cycle[] { BNE, FixPC });
             instructions[0xF0] = new Instruction("BEQ rel",   AddressingMode.REL, false, new Cycle[] { BEQ, FixPC });
 
-            instructions[0x08] = new Instruction("PHP impl",  AddressingMode.IMP, false, new Cycle[] { PushP(true) });
+            instructions[0x08] = new Instruction("PHP impl",  AddressingMode.IMP, false, new Cycle[] { PushP(true, false) });
             instructions[0x28] = new Instruction("PLP impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullP(false) });
             instructions[0x48] = new Instruction("PHA impl",  AddressingMode.IMP, false, new Cycle[] { PushA });
             instructions[0x68] = new Instruction("PLA impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullA });

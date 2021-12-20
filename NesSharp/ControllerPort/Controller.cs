@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using SFML.Window;
+﻿using SFML.Window;
 using static SFML.Window.Keyboard;
 
 namespace NesSharp
@@ -9,7 +7,8 @@ namespace NesSharp
     {
         Keyboard.Key[] Keymap1;
         Keyboard.Key[] Keymap2;
-        uint number;
+        uint number, counter;
+
 
         public Controller(uint number)
         {
@@ -27,32 +26,16 @@ namespace NesSharp
             {
                 register = (byte)((register << 1) | (IsKeyPressed(key) ? 1 : 0));
             }
+            counter = 8;
         }
 
-        public override byte Read()
+        public override (byte, byte) Read()
         {
+            if (counter == 0) return (1, 1);
+            register = rol(register);
             byte Bit = (byte)(register & 0x1);
-            ror(ref register);
-            return Bit;
-        }
-        private Keyboard.Key mapStringToKey(string s) {
-            switch (s) {
-                case "Q": return Key.Q;
-                case "E": return Key.E;
-                case "Esc": return Key.Escape;
-                case "Spc": return Key.Space;
-                case "W": return Key.W;
-                case "S": return Key.S;
-                case "A": return Key.A;
-                case "D": return Key.D;
-                case "U": return Key.U;
-                case "O": return Key.O;
-                case "I": return Key.I;
-                case "K": return Key.K;
-                case "J": return Key.J;
-                case "L": return Key.L;
-            }
-            return Key.A;
+            counter--;
+            return (Bit, 0x1);
         }
     }
 }
