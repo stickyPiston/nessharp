@@ -391,15 +391,23 @@ namespace NesSharp.PPU
                                 spritePatternAddress = control.SpritePatterntableAddress8x8;
                                 spritePatternAddress |= (ushort) (secondaryOam.Sprites[SpriteIndex].index << 4);
                                 spritePatternAddress |= (ushort) (y & 0b111);
-
-                                spritePatternShiftRegs[SpriteIndex] = (bus.Read(spritePatternAddress), bus.Read(
-                                    (ushort) (spritePatternAddress | 8)));
-                                break;
                             }
                             else
                             {
-                                throw new NotImplementedException();
+                                spritePatternAddress = (ushort) ((secondaryOam.Sprites[SpriteIndex].index & 1) << 12);
+                                spritePatternAddress |=
+                                    (ushort) ((secondaryOam.Sprites[SpriteIndex].index & 0xfe) << 4);
+                                if (scanline - secondaryOam.Sprites[SpriteIndex].Y >= 8)
+                                {
+                                    spritePatternAddress |= 1 << 4;
+                                }
+
+                                spritePatternAddress |= (ushort) (y & 0b111);
                             }
+
+                            spritePatternShiftRegs[SpriteIndex] = (bus.Read(spritePatternAddress), bus.Read(
+                                (ushort) (spritePatternAddress | 8)));
+                            break;
                         case 0:
                             isRenderingSpriteZero = secondaryOamHasSpriteZero;
                             SpriteIndex++;
@@ -525,7 +533,7 @@ namespace NesSharp.PPU
                 status.Sprite0Hit = false;
                 status.SpriteOverflow = false;
             }
-            
+
             // Pixel 2 so that the CPU can still read the correct value
             if (scanline == 261 && pixel == 2)
             {
