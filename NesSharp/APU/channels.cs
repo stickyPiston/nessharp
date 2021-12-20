@@ -2,7 +2,7 @@
 
 namespace NesSharp
 {
-    public class X2A03
+    public class X2A03 : IAddressable
     {
         //https://wiki.nesdev.com/w/index.php/APU_Length_Counter
         private readonly short[] lc_table = {10, 254, 20,  2, 40,  4, 80,  6, 160,
@@ -13,7 +13,12 @@ namespace NesSharp
         //https://www.nesdev.org/2A03%20technical%20reference.txt
         public Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
         public Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
-        public void CpuWrite(UInt16 addr, sbyte value)
+        
+        public (byte, byte) Read(UInt16 addr) {
+            return (0, 0);
+        }
+
+        public void Write(UInt16 addr, byte value)
         {
             switch (addr)
             {
@@ -36,8 +41,8 @@ namespace NesSharp
                 case 0x4001:
                     pulse1.p_swp.enabled = Convert.ToBoolean(value & 0x80);
                     pulse1.p_swp.down = Convert.ToBoolean(value & 0x08);
-                    pulse1.p_swp.divider = (sbyte)(Convert.ToSByte(value & 0x70) >> 4);
-                    pulse1.p_swp.shift = Convert.ToSByte(value & 0x07);
+                    pulse1.p_swp.divider = (sbyte)(Convert.ToByte(value & 0x70) >> 4);
+                    pulse1.p_swp.shift = (sbyte)(value & 0x07);
                     pulse1.p_swp.reload = true;
                     break;
 
@@ -49,7 +54,7 @@ namespace NesSharp
                     pulse1.p_seq.reload = (ushort)((value & 0x07) << 8 | (pulse1.p_seq.reload & 0x00FF));
                     pulse1.p_seq.counter = pulse1.p_seq.reload;
                     pulse1.p_seq.sequence = pulse1.p_seq.new_sequence;
-                    pulse1.p_lc.counter = Convert.ToSByte(lc_table[(value & 0xF8) >> 3]);
+                    pulse1.p_lc.counter = (sbyte)(lc_table[(value & 0xF8) >> 3]);
                     pulse1.p_env.start = true;
                     break;
 
@@ -71,8 +76,8 @@ namespace NesSharp
                 case 0x4005:
                     pulse2.p_swp.enabled = Convert.ToBoolean(value & 0x80);
                     pulse2.p_swp.down = Convert.ToBoolean(value & 0x08);
-                    pulse2.p_swp.divider = (sbyte)(Convert.ToSByte(value & 0x70) >> 4);
-                    pulse2.p_swp.shift = Convert.ToSByte(value & 0x07);
+                    pulse2.p_swp.divider = (sbyte)(Convert.ToByte(value & 0x70) >> 4);
+                    pulse2.p_swp.shift = (sbyte)(value & 0x07);
                     pulse2.p_swp.reload = true;
                     break;
 
@@ -84,7 +89,7 @@ namespace NesSharp
                     pulse2.p_seq.reload = (ushort)((value & 0x07) << 8 | (pulse2.p_seq.reload & 0x00FF));
                     pulse2.p_seq.counter = pulse2.p_seq.reload;
                     pulse2.p_seq.sequence = pulse2.p_seq.new_sequence;
-                    pulse2.p_lc.counter = Convert.ToSByte(lc_table[(value & 0xF8) >> 3]);
+                    pulse2.p_lc.counter = (sbyte)(lc_table[(value & 0xF8) >> 3]);
                     pulse2.p_env.start = true;
                     break;
 
@@ -159,14 +164,17 @@ namespace NesSharp
     /*(public int CpuRead(ushort addr)
     {
     }*/
-    public class ApuClock : X2A03
+    public class ApuClock : X2A03, IClockable
     {
         bool quarterFrame = false;
         bool halfFrame = false;
         UInt32 clock_counter = 0;
         UInt32 clock_counter2 = 0;
 
-        public ApuClock()
+        public void Reset() {
+        }
+
+        public void Cycle()
         {
             if (clock_counter % 6 == 0)
             {
@@ -212,8 +220,11 @@ namespace NesSharp
                     pulse1.p_lc.Clock(pulse1.p_status, pulse1.p_halt);
 
                 }
-            }
 
+                pulse1.p_swp.PpuClock(pulse1.p_seq.reload);
+                pulse2.p_swp.PpuClock(pulse2.p_seq.reload);
+                clock_counter++;
+            }
         }
 
     }

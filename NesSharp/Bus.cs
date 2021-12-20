@@ -36,6 +36,7 @@ namespace NesSharp {
     public class Bus {
         private CPU cpu;
         private PPU.PPU ppu;
+        private ApuClock apu;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
@@ -62,6 +63,7 @@ namespace NesSharp {
 
         public void Tick() {
             ppu.Cycle();
+
             if (clock % 3 == 0)
             {
                 if (OAMDMACycles == 0) {
@@ -80,6 +82,8 @@ namespace NesSharp {
                 // Console.WriteLine(cpu.DumpCycle());
             if (OAMDMACycles > 0) OAMDMACycles--;
             }
+
+            apu.Cycle();
 
             // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
             
@@ -128,6 +132,11 @@ namespace NesSharp {
         public void Register(PPU.PPU ppu)
         {
             this.ppu = ppu;
+        }
+
+        public void Register(ApuClock apu)
+        {
+            this.apu = apu;
         }
 
         public byte Read(ushort addr) {

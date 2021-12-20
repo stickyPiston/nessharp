@@ -151,7 +151,7 @@ namespace NesSharp {
         public void SetupCartridge(string file) {
             // Load config
             // TODO maybe other place
-            string source = File.ReadAllText("../../../../NesSharp/Configuration.json");
+            string source = File.ReadAllText("NesSharp/Configuration.json");
             ConfigurationManager.LoadConfiguration(source);
             
             
@@ -167,6 +167,10 @@ namespace NesSharp {
             bus.Register(cpu);
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            
+            // Create apu
+            ApuClock apu = new ApuClock();
+            bus.Register(apu);
+            bus.Register(apu, new Range[] { new Range(0x4000, 0x4013), new Range(0x4015, 0x4015) });
             
             // Create PPU
             PPU.PPU ppu = new PPU.PPU(im, bus);
