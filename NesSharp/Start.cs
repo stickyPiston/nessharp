@@ -8,8 +8,15 @@ using NesSharp.PPU;
 using Sprite = SFML.Graphics.Sprite;
 using Eto.Forms;
 using Eto.Drawing;
+using Keyboard = SFML.Window.Keyboard;
+using KeyEventArgs = SFML.Window.KeyEventArgs;
+using System.Collections.Generic;
 
 namespace NesSharp {
+
+    public static class InputManager {
+        public static HashSet<Keyboard.Key> keysPressed = new HashSet<Keyboard.Key>();
+    }
 
     public class RandomRam : IAddressable
     {
@@ -100,7 +107,7 @@ namespace NesSharp {
 
                 Application.Instance.InvokeAsync(() => { if (running) emulator.Render(); });
                 
-                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
+                /* Console.WriteLine(1/c.ElapsedTime.AsSeconds()); */
                 c.Restart();
             }
         }
@@ -146,12 +153,26 @@ namespace NesSharp {
             im = new Texture(256, 240);
             s = new Sprite(im);
             s.TextureRect = new IntRect(0, 0, 256, 240);
+
+            // Initialise input
+            /* rw.SetKeyRepeatEnabled(false); */
+            rw.KeyPressed += HandlePressed;
+            rw.KeyReleased += HandleReleased;
+        }
+
+        public void HandlePressed(object _, KeyEventArgs e) {
+            InputManager.keysPressed.Add(e.Code);
+        }
+
+        public void HandleReleased(object _, KeyEventArgs e) {
+            Console.WriteLine($"{e.Code.ToString()} released!");
+            InputManager.keysPressed.Remove(e.Code);
         }
 
         public void SetupCartridge(string file) {
             // Load config
             // TODO maybe other place
-            string source = File.ReadAllText("../../../../NesSharp/Configuration.json");
+            string source = File.ReadAllText("/Users/job/Desktop/code/nessharp-og/NesSharp/Configuration.json");
             ConfigurationManager.LoadConfiguration(source);
             
             
@@ -199,22 +220,6 @@ namespace NesSharp {
             }
         }
 
-        public static void Main(string[] args)
-        {
-            Emulator emulator = new Emulator();
-            emulator.SetupScreen(IntPtr.Zero);
-            emulator.SetupCartridge("C:\\Users\\maxva\\Downloads\\Balloon Fight (USA).nes");
-            // emulator.SetupCartridge("C:\\Users\\maxva\\Downloads\\Donkey Kong (World) (Rev A).nes");
-
-            Clock c = new Clock();
-            // Run Emulator
-            while (true)
-            {
-                emulator.RunFrame();
-                emulator.Render();
-                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
-                c.Restart();
-            }
-        }
+        public static void Main() { }
     }
 }
