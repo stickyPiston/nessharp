@@ -51,7 +51,7 @@ namespace NesSharp
             disable = x;
             volume = z;
         }
-        void Apuclock(bool loop)
+        public ushort ApuClock(bool loop)
         {
             if (!start)
             {
@@ -82,6 +82,7 @@ namespace NesSharp
                 output = volume;
             else
                 output = decay_counter;
+            return output;
         }
     }
 
@@ -155,7 +156,7 @@ namespace NesSharp
         {
             counter = z;
         }
-        sbyte Clock(bool enable, bool pause)
+        public sbyte Clock(bool enable, bool pause)
         {
             if (!enable)
                 counter = 0;
@@ -189,18 +190,11 @@ namespace NesSharp
             for (double n = 1; n < harmonics; n++)
             {
                 double c = n * frequency * 2.0 * pi * t;
-                a += -Sinus(c) / n;
-                b += -Sinus(c - p * n) / n;
+                a += -Math.Sin(c) / n;
+                b += -Math.Sin(c - p * n) / n;
             }
 
             return (2.0 * amplitude / pi) * (a - b);
-        }
-
-        static double Sinus(double t)
-        {
-            double j = t * 0.15915;
-            j = j - (int)j;
-            return 20.785 * j * (j - 0.5) * (j - 1.0f);
         }
     }
 }

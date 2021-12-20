@@ -11,10 +11,10 @@ namespace NesSharp
                                     26, 16, 28, 32, 30};
 
         //https://www.nesdev.org/2A03%20technical%20reference.txt
+        public Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
+        public Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
         public void CpuWrite(UInt16 addr, sbyte value)
         {
-            Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
-            Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
             switch (addr)
             {
                 //pulse 1 channel
@@ -87,8 +87,34 @@ namespace NesSharp
                     pulse2.p_lc.counter = Convert.ToSByte(lc_table[(value & 0xF8) >> 3]);
                     pulse2.p_env.start = true;
                     break;
+
+                case 0x4015:
+                    pulse1.p_status = Convert.ToBoolean(value & 0x01);
+                    pulse2.p_status = Convert.ToBoolean(value & 0x02);
+
+                    //return length counter status
+
+                    break;
+
+                case 0x400F:
+                    pulse1.p_env.start = true;
+                    pulse2.p_env.start = true;
+                    break;
             }
         }
+        /*
+        public sbyte CpuRead(UInt16 addr)
+        {
+            sbyte var = 0x00;
+
+            if (addr == 0x4015)
+            {
+                var |= (pulse1.p_lc > 0) ? 0x01 : 0x00;
+                var |= (pulse2.p_lc > 0) ? 0x02 : 0x00;		
+            }
+
+            return var;
+        }*/
 
         //the pulse object, used in both pulse channels
         public class Pulse
@@ -126,21 +152,70 @@ namespace NesSharp
             }
 
         }
-}
+
+    }
 
     //cpuread method
     /*(public int CpuRead(ushort addr)
     {
     }*/
-    public class ApuClock
+    public class ApuClock : X2A03
     {
+        bool quarterFrame = false;
+        bool halfFrame = false;
+        UInt32 clock_counter = 0;
+        UInt32 clock_counter2 = 0;
+
         public ApuClock()
-        { 
-        
+        {
+            if (clock_counter % 6 == 0)
+            {
+                clock_counter2++;
+
+
+                // 4-Step Sequence Mode
+                if (clock_counter2 == 3729)
+                {
+                    quarterFrame = true;
+                }
+
+                if (clock_counter2 == 7457)
+                {
+                    quarterFrame = true;
+                    halfFrame = true;
+                }
+
+                if (clock_counter2 == 11186)
+                {
+                    quarterFrame = true;
+                }
+
+                if (clock_counter2 == 14916)
+                {
+                    quarterFrame = true;
+                    halfFrame = true;
+                    clock_counter2 = 0;
+                }
+
+                if (quarterFrame == true)
+                {
+                    pulse1.p_env.ApuClock(pulse1.p_halt);
+                    pulse2.p_env.ApuClock(pulse2.p_halt);
+                }
+
+                if (halfFrame == true)
+                {
+                    pulse1.p_lc.Clock(pulse1.p_status, pulse1.p_halt);
+                    pulse2.p_lc.Clock(pulse2.p_status, pulse2.p_halt);
+                    pulse1.p_swp.ApuClock(pulse1.p_seq.reload, 0);
+                    pulse2.p_swp.ApuClock(pulse2.p_seq.reload, 1);
+                    pulse1.p_lc.Clock(pulse1.p_status, pulse1.p_halt);
+
+                }
+            }
+
         }
-            
 
     }
-
 }
 
