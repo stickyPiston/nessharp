@@ -15,7 +15,21 @@ namespace NesSharp {
     public class ConfigurationManager {
         private static Configuration instance;
         public static Configuration getConfig() => instance;
-        public static void LoadConfiguration(string source) {
+        public static void LoadConfiguration() {
+        var filepath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var path = Path.Combine(filepath, ".NesSharp.json");
+            string source;
+            try
+            {
+                source = File.ReadAllText(path);
+            }
+            catch
+            {
+                File.WriteAllText(path, source = @"{ ""ControllerCount"": 2,
+                ""Keymap1"": [""Z"", ""X"", ""LShift"", ""Enter"", ""Up"", ""Down"", ""Left"", ""Right""],
+                ""Keymap2"": [""U"", ""O"", ""Escape"", ""Space"", ""I"", ""K"", ""J"", ""L""] } ");
+            }
+
             var options = new JsonSerializerOptions
             {
                 Converters = {
