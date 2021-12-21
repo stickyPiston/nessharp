@@ -16,6 +16,7 @@ namespace NesSharp {
 
     public static class InputManager {
         public static HashSet<Keyboard.Key> keysPressed = new HashSet<Keyboard.Key>();
+
     }
 
     public class RandomRam : IAddressable
@@ -122,10 +123,29 @@ namespace NesSharp {
         private Bus bus;
 
         public void Render() {
+            Update();
             rw.DispatchEvents();
             rw.Clear();
             rw.Draw(s);
             rw.Display();
+        }
+
+        public void Update() {
+            void updateKey(Keyboard.Key key) {
+                if (Keyboard.IsKeyPressed(key) && rw.HasFocus()) {
+                    InputManager.keysPressed.Add(key);
+                } else {
+                    InputManager.keysPressed.Remove(key);
+                }
+            }
+
+            foreach (var key in ConfigurationManager.getConfig().Keymap1) {
+                updateKey(key);
+            }
+
+            foreach (var key in ConfigurationManager.getConfig().Keymap2) {
+                updateKey(key);
+            }
         }
 
         public void RunFrame() {
@@ -153,20 +173,6 @@ namespace NesSharp {
             im = new Texture(256, 240);
             s = new Sprite(im);
             s.TextureRect = new IntRect(0, 0, 256, 240);
-
-            // Initialise input
-            /* rw.SetKeyRepeatEnabled(false); */
-            rw.KeyPressed += HandlePressed;
-            rw.KeyReleased += HandleReleased;
-        }
-
-        public void HandlePressed(object _, KeyEventArgs e) {
-            InputManager.keysPressed.Add(e.Code);
-        }
-
-        public void HandleReleased(object _, KeyEventArgs e) {
-            Console.WriteLine($"{e.Code.ToString()} released!");
-            InputManager.keysPressed.Remove(e.Code);
         }
 
         public void SetupCartridge(string file) {
