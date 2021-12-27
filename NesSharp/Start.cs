@@ -151,8 +151,7 @@ namespace NesSharp {
         public void SetupCartridge(string file) {
             // Load config
             // TODO maybe other place
-            string source = File.ReadAllText("NesSharp/Configuration.json");
-            ConfigurationManager.LoadConfiguration(source);
+            ConfigurationManager.LoadConfiguration();
             
             
             // Create Bus, CPU, and ControllerPort
@@ -216,7 +215,7 @@ namespace NesSharp {
             {
                 emulator.RunFrame();
                 emulator.Render();
-                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
+                //Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
         }

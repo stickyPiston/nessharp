@@ -249,8 +249,12 @@ namespace NesSharp
     {
         public double outPut()
         {
+            Console.WriteLine(pulse1.p_sample * 0.1 +
+            pulse2.p_sample * 0.1);
             return pulse1.p_sample * 0.1 +
             pulse2.p_sample * 0.1;
+
+
         }
     }
 }
