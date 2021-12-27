@@ -4,6 +4,7 @@ namespace NesSharp
 {
     public class X2A03 : IAddressable
     {
+        //public double globalTime = 0.0;
         //https://wiki.nesdev.com/w/index.php/APU_Length_Counter
         private readonly short[] lc_table = {10, 254, 20,  2, 40,  4, 80,  6, 160,
                                     8, 60, 10, 14, 12, 26, 14, 12,  16,
@@ -13,7 +14,7 @@ namespace NesSharp
         //https://www.nesdev.org/2A03%20technical%20reference.txt
         public Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
         public Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 00000000, 0000000, false, 1);
-        
+        //public double globalTime = 0.0;
         public (byte, byte) Read(UInt16 addr) {
             return (0, 0);
         }
@@ -107,19 +108,19 @@ namespace NesSharp
                     break;
             }
         }
-        /*
+
         public sbyte CpuRead(UInt16 addr)
         {
             sbyte var = 0x00;
 
-            if (addr == 0x4015)
+            /*if (addr == 0x4015)
             {
                 var |= (pulse1.p_lc > 0) ? 0x01 : 0x00;
                 var |= (pulse2.p_lc > 0) ? 0x02 : 0x00;		
-            }
+            }*/
 
             return var;
-        }*/
+        }
 
         //the pulse object, used in both pulse channels
         public class Pulse
@@ -127,19 +128,20 @@ namespace NesSharp
             public bool p_status;
             public bool p_halt;
             public double p_sample;
-            public double p_output;
+            //public double p_output;
             public Sequencer p_seq;
             public Oscillator p_osc;
             public Envelope p_env;
             public Sweeper p_swp;
             public Lengthcounter p_lc;
+            public double globalTime;
 
             public Pulse(bool x, bool y, double a, double b, uint z, ushort h, bool i, sbyte j)
             {
                 p_status = x;
                 p_halt = y;
                 p_sample = a;
-                p_output = b;
+                //p_output = b;
 
                 p_seq = new Sequencer(z, h);
                 p_osc = new Oscillator(z);
@@ -164,18 +166,30 @@ namespace NesSharp
     /*(public int CpuRead(ushort addr)
     {
     }*/
+
     public class ApuClock : X2A03, IClockable
     {
         bool quarterFrame = false;
         bool halfFrame = false;
         UInt32 clock_counter = 0;
         UInt32 clock_counter2 = 0;
+        readonly double third = 0.3333333333;
+        public double globalTime = 0.0;
+        /*
+        public double GlobalTime
+        {
+            get { return globalTime; }
+            set { globalTime = value; }
+        }*/
+
 
         public void Reset() {
         }
 
         public void Cycle()
         {
+            //should be a third of the ppu frequency
+            globalTime += third / 1789773;
             if (clock_counter % 6 == 0)
             {
                 clock_counter2++;
@@ -221,12 +235,23 @@ namespace NesSharp
 
                 }
 
-                pulse1.p_swp.PpuClock(pulse1.p_seq.reload);
-                pulse2.p_swp.PpuClock(pulse2.p_seq.reload);
+                pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
+                pulse1.p_sample = pulse1.p_osc.Sample(globalTime);
+
+                pulse1.p_sample = pulse1.p_seq.output;
+                pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
+                pulse2.p_swp.TrackClock(pulse2.p_seq.reload);
                 clock_counter++;
             }
         }
-
+    }
+    public class APUOutPut : X2A03
+    {
+        public double outPut()
+        {
+            return pulse1.p_sample * 0.1 +
+            pulse2.p_sample * 0.1;
+        }
     }
 }
 

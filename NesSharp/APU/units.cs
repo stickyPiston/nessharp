@@ -21,7 +21,7 @@ namespace NesSharp
             sequence = z;
             new_sequence = z;
         }
-        public int Clock(bool active, Func<uint, uint> funcTimer)
+        public int Clock(bool active, Func<UInt32, uint> funcTimer)
 		{
 			if (active)
 			{   
@@ -109,7 +109,7 @@ namespace NesSharp
         }
 
         //tracks
-        public void PpuClock(ushort target)
+        public void TrackClock(ushort target)
         {
             if (enabled)
             {
@@ -171,7 +171,7 @@ namespace NesSharp
     public class Oscillator
     {
         public double dutycycle = 0;
-        double frequency = 0;
+        public double frequency = 0;
         double amplitude = 1;
         double pi = 3.141592653;
         double harmonics = 20;
@@ -181,7 +181,7 @@ namespace NesSharp
             dutycycle = z;
         }
 
-        double Sample(double t)
+        public double Sample(double t)
         {
             double a = 0;
             double b = 0;
