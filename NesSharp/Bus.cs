@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Collections.Generic;
 using System;
+using SFML.Audio;
 
 namespace NesSharp {
     public struct Range {
@@ -36,7 +37,7 @@ namespace NesSharp {
     public class Bus {
         private CPU cpu;
         private PPU.PPU ppu;
-        private ApuClock apu;
+        private X2A03 apu;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
@@ -47,7 +48,6 @@ namespace NesSharp {
         private byte OAMDATA = 0;
         private ushort DMACopyAddr;
 
-        //public Run(string romFilepath) { when the emulator accepts roms
         public void RunFrame() {
             int frames = ppu.FrameCycleCount();
             for(int i = 0; i < frames; i++)
@@ -60,6 +60,9 @@ namespace NesSharp {
             OAMDMACycles = clock < 3 ? 514 : 513;
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
+
+        private short[] samples = new short[512];
+        private ushort sampleCounter = 0;
 
         public void Tick() {
             ppu.Cycle();
@@ -85,11 +88,20 @@ namespace NesSharp {
 
             apu.Cycle();
 
-            // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
-            
-
+            if (clock == 0) {
+                if (sampleCounter == 512) {
+                    var buffer = new SoundBuffer(samples, 1, 44100);
+                    var sound = new Sound(buffer);
+                    sound.Play();
+                    sampleCounter = 0;
+                    Array.Clear(samples, 0, 512);
+                } else {
+                    samples[sampleCounter++] = (short)(apu.output() * Int16.MaxValue);
+                }
+            }
+                
             clock += 1;
-            clock %= 6;
+            clock %= 121;
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>
@@ -134,7 +146,7 @@ namespace NesSharp {
             this.ppu = ppu;
         }
 
-        public void Register(ApuClock apu)
+        public void Register(X2A03 apu)
         {
             this.apu = apu;
         }

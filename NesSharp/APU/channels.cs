@@ -2,7 +2,7 @@
 
 namespace NesSharp
 {
-    public class X2A03 : IAddressable
+    public class X2A03 : IAddressable, IClockable
     {
         //public double globalTime = 0.0;
         //https://wiki.nesdev.com/w/index.php/APU_Length_Counter
@@ -19,12 +19,14 @@ namespace NesSharp
             return (0, 0);
         }
 
-        public void Write(UInt16 addr, byte value)
+        public void Write(ushort addr, byte value)
         {
+            /* Console.WriteLine($"APU write! {addr} => {value}"); */
             switch (addr)
             {
                 //pulse 1 channel
                 case 0x4000:
+                    /* Console.WriteLine($"Duty cycle becomes {(value & 0xC0) >> 6}"); */
                     switch ((value & 0xC0) >> 6)
                     {
                         case 0x00: pulse1.p_seq.sequence = 0b01000000; pulse1.p_osc.dutycycle = 0.125; break;
@@ -109,19 +111,6 @@ namespace NesSharp
             }
         }
 
-        public sbyte CpuRead(UInt16 addr)
-        {
-            sbyte var = 0x00;
-
-            /*if (addr == 0x4015)
-            {
-                var |= (pulse1.p_lc > 0) ? 0x01 : 0x00;
-                var |= (pulse2.p_lc > 0) ? 0x02 : 0x00;		
-            }*/
-
-            return var;
-        }
-
         //the pulse object, used in both pulse channels
         public class Pulse
         {
@@ -151,6 +140,7 @@ namespace NesSharp
             }
         }
 
+        // TODO
         public class Triangle
         {
             public Triangle()
@@ -160,15 +150,6 @@ namespace NesSharp
 
         }
 
-    }
-
-    //cpuread method
-    /*(public int CpuRead(ushort addr)
-    {
-    }*/
-
-    public class ApuClock : X2A03, IClockable
-    {
         bool quarterFrame = false;
         bool halfFrame = false;
         UInt32 clock_counter = 0;
@@ -190,10 +171,11 @@ namespace NesSharp
         {
             //should be a third of the ppu frequency
             globalTime += third / 1789773;
+            /* Console.WriteLine($"globalTime: {globalTime}"); */
+            /* Console.WriteLine(clock_counter); */
             if (clock_counter % 6 == 0)
             {
                 clock_counter2++;
-
 
                 // 4-Step Sequence Mode
                 if (clock_counter2 == 3729)
@@ -232,29 +214,26 @@ namespace NesSharp
                     pulse1.p_swp.ApuClock(pulse1.p_seq.reload, 0);
                     pulse2.p_swp.ApuClock(pulse2.p_seq.reload, 1);
                     pulse1.p_lc.Clock(pulse1.p_status, pulse1.p_halt);
-
                 }
-
-                pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
-                pulse1.p_sample = pulse1.p_osc.Sample(globalTime);
-
-                pulse1.p_sample = pulse1.p_seq.output;
-                pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
-                pulse2.p_swp.TrackClock(pulse2.p_seq.reload);
-                clock_counter++;
             }
+
+            pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
+            /* pulse1.p_sample = pulse1.p_osc.Sample(globalTime); */
+            pulse1.p_seq.Clock(
+                pulse1.p_status,
+                (s) => ((s & 0x0001) << 7) | ((s & 0x00FE) >> 1)
+            );
+            pulse1.p_sample = pulse1.p_seq.output;
+            pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
+            pulse2.p_swp.TrackClock(pulse2.p_seq.reload);
+
+            clock_counter++;
         }
-    }
-    public class APUOutPut : X2A03
-    {
-        public double outPut()
+
+        public short output()
         {
-            Console.WriteLine(pulse1.p_sample * 0.1 +
-            pulse2.p_sample * 0.1);
-            return pulse1.p_sample * 0.1 +
-            pulse2.p_sample * 0.1;
-
-
+            Console.WriteLine($"Pulse 1 sample: {pulse1.p_sample * 2 - 1}");
+            return (short)(pulse1.p_sample * 2 - 1); // + pulse2.p_sample * 0.1;
         }
     }
 }

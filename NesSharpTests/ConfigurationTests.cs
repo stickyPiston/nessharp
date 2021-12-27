@@ -8,8 +8,7 @@ namespace NesSharpTests {
     public class ConfigurationTests {
         [Test]
         public void TestConfigLoad() {
-            string source = File.ReadAllText("../../../Configuration.json");
-            ConfigurationManager.LoadConfiguration(source);
+            ConfigurationManager.LoadConfiguration();
             var config = ConfigurationManager.getConfig();
 
             Assert.AreEqual(2, config.ControllerCount);

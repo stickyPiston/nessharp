@@ -21,20 +21,17 @@ namespace NesSharp
             sequence = z;
             new_sequence = z;
         }
-        public int Clock(bool active, Func<UInt32, uint> funcTimer)
-		{
-			if (active)
-			{   
-				counter--;
-				if (counter == 0xFFFF)
-				{   
-                    counter = reload;
-					funcTimer(sequence);
-                    output = (sbyte)(sequence & 0x00000001);
-				}
+        public int Clock(bool active, Func<uint, uint> funcTimer) {
+          if (active) {   
+            counter--;
+            if (counter == 0xFFFF) {   
+                counter = reload;
+                sequence = funcTimer(sequence);
+                output = (sbyte)(sequence & 0x00000001);
             }
-        return output;
-		}
+          }
+          return output;
+        }
     }
 
     public class Envelope
@@ -183,18 +180,20 @@ namespace NesSharp
 
         public double Sample(double t)
         {
-            double a = 0;
-            double b = 0;
-            double p = dutycycle * 2.0 * pi;
+            /* double a = 0; */
+            /* double b = 0; */
+            /* double p = dutycycle * 2.0 * pi; */
 
-            for (double n = 1; n < harmonics; n++)
-            {
-                double c = n * frequency * 2.0 * pi * t;
-                a += -Math.Sin(c) / n;
-                b += -Math.Sin(c - p * n) / n;
-            }
+            /* for (double n = 1; n < harmonics; n++) */
+            /* { */
+            /*     double c = n * frequency * 2.0 * pi * t; */
+            /*     a += -Math.Sin(c) / n; */
+            /*     b += -Math.Sin(c - p * n) / n; */
+            /* } */
 
-            return (2.0 * amplitude / pi) * (a - b);
+            /* Console.WriteLine($"A: {amplitude}, a: {a}, b: {b}"); */
+            /* return amplitude; /// pi) * (a - b); */
+            return 0.0;
         }
     }
 }
