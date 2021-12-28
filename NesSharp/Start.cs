@@ -194,7 +194,7 @@ namespace NesSharp {
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            
             // Create apu
-            X2A03 apu = new X2A03();
+            X2A03 apu = new X2A03(bus);
             bus.Register(apu);
             bus.Register(apu, new Range[] { new Range(0x4000, 0x4013), new Range(0x4015, 0x4015) });
             

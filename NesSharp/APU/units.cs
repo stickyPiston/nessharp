@@ -41,7 +41,7 @@ namespace NesSharp
         UInt16 divider_counter = 0;
         UInt16 decay_counter = 0;
         public UInt16 volume = 0;
-        UInt16 output = 0;
+        public UInt16 output = 0;
         public Envelope(bool x, ushort z)
         {
             start = x;
@@ -169,7 +169,7 @@ namespace NesSharp
     {
         public double dutycycle = 0;
         public double frequency = 0;
-        double amplitude = 1;
+        public double amplitude = 1;
         double pi = 3.141592653;
         double harmonics = 20;
 
@@ -180,20 +180,20 @@ namespace NesSharp
 
         public double Sample(double t)
         {
-            /* double a = 0; */
-            /* double b = 0; */
-            /* double p = dutycycle * 2.0 * pi; */
+             double a = 0;
+             double b = 0; 
+             double p = dutycycle * 2.0 * pi; 
 
-            /* for (double n = 1; n < harmonics; n++) */
-            /* { */
-            /*     double c = n * frequency * 2.0 * pi * t; */
-            /*     a += -Math.Sin(c) / n; */
-            /*     b += -Math.Sin(c - p * n) / n; */
-            /* } */
+             for (double n = 1; n < harmonics; n++) 
+             { 
+                double c = n * frequency * 2.0 * pi * t; 
+                 a += -Math.Sin(c) / n; 
+                 b += -Math.Sin(c - p * n) / n; 
+             } 
 
-            /* Console.WriteLine($"A: {amplitude}, a: {a}, b: {b}"); */
-            /* return amplitude; /// pi) * (a - b); */
-            return 0.0;
+             //Console.WriteLine($"A: {amplitude}, a: {a}, b: {b}"); 
+             return (amplitude * 2.0 / pi) * (a - b); 
+             
         }
     }
 }
