@@ -171,29 +171,35 @@ namespace NesSharp
         public double frequency = 0;
         public double amplitude = 1;
         double pi = 3.141592653;
-        double harmonics = 20;
+        //public double harmonics = 20;
 
         public Oscillator(uint z)
         {
             dutycycle = z;
         }
-
+        
         public double Sample(double t)
         {
              double a = 0;
-             double b = 0; 
-             double p = dutycycle * 2.0 * pi; 
+             double b = 0;
+            double p = dutycycle * 2.0 * pi;
 
-             for (double n = 1; n < harmonics; n++) 
+             for (double n = 1; n < 20; n++) 
              { 
                 double c = n * frequency * 2.0 * pi * t; 
-                 a += -Math.Sin(c) / n; 
-                 b += -Math.Sin(c - p * n) / n; 
+                 a += Approxsin(c) / n; 
+                 b += Approxsin(c - p * n) / n; 
              } 
 
              //Console.WriteLine($"A: {amplitude}, a: {a}, b: {b}"); 
              return (amplitude * 2.0 / pi) * (a - b); 
              
+        }
+        public double Approxsin(double t)
+        {
+            double j = (double)(t * 0.15915);
+            j = j - (int)j;
+            return (double)(20.785 * j * (j - 0.5) * (j - 1.0f));
         }
     }
 }

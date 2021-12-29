@@ -47,7 +47,7 @@ namespace NesSharp {
         private int OAMDMACycles = 0;
         private byte OAMDATA = 0;
         private ushort DMACopyAddr;
-
+        private int cpucycle = 0;
         public void RunFrame() {
             int frames = ppu.FrameCycleCount();
             for(int i = 0; i < frames; i++)
@@ -61,7 +61,7 @@ namespace NesSharp {
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
 
-        private short[] samples = new short[512];
+        private short[] samples = new short[768];
         private ushort sampleCounter = 0;
 
         public void Tick() {
@@ -69,6 +69,7 @@ namespace NesSharp {
 
             if (clock % 3 == 0)
             {
+                cpucycle++;
                 if (OAMDMACycles == 0) {
                     cpu.Cycle();
                 } else if (OAMDMACycles <= 512) {
@@ -86,17 +87,18 @@ namespace NesSharp {
             if (OAMDMACycles > 0) OAMDMACycles--;
             }
 
+
             apu.Cycle();
 
             if (clock == 0) {
-                if (sampleCounter == 512) {
+                if (sampleCounter == 768) {// 512, 768, 1024
                     var buffer = new SoundBuffer(samples, 1, 44100);
                     var sound = new Sound(buffer);
                     sound.Play();
                     sampleCounter = 0;
-                    Array.Clear(samples, 0, 512);
+                    Array.Clear(samples, 0, 768);
                 } else {
-                    samples[sampleCounter++] = (short)(apu.output() * Int16.MaxValue);
+                    samples[sampleCounter++] = (short)(apu.output() * 15000);
                 }
             }
                 
