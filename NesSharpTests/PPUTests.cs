@@ -8,13 +8,20 @@ using Range = NesSharp.Range;
 
 namespace NesSharpTests
 {
-    public class PPUTests
+    public class BasePPUTest
     {
-        Bus bus;
-        CPU cpu;
-        RAM ram;
-        PPU ppu;
-        private PPUMemoryBus ppubus;
+        protected Bus bus;
+        protected CPU cpu;
+        protected RAM ram;
+        protected PPU ppu;
+        protected PPUMemoryBus ppubus;
+
+        private string romSuiteName;
+
+        public BasePPUTest(string romSuiteName)
+        {
+            this.romSuiteName = romSuiteName;
+        }
 
         [SetUp]
         public void Setup()
@@ -25,7 +32,7 @@ namespace NesSharpTests
             bus.Register(cpu);
 
             bus.Register(cpu);
-           
+
             // Create PPU
             PPU ppu = new PPU(null, bus);
             ppubus = ppu.bus;
@@ -35,31 +42,34 @@ namespace NesSharpTests
             ppubus.Patterntables = new RandomRam();
 
             bus.Register(ppu);
-            bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
-            bus.Register(ppu, new []{new Range(0x4014, 0x4014)});
+            bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] {new Range(0x2000, 0x3fff)});
+            bus.Register(ppu, new[] {new Range(0x4014, 0x4014)});
             ram = new RAM(0x10000);
-            bus.Register(ram, new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)});
-            bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0x800, 0x1fff)});
-            
-            
+            bus.Register(ram,
+                new[]
+                {
+                    new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)
+                });
+            bus.Register(new Repeater(ram, 0, 0x800), new[] {new Range(0x800, 0x1fff)});
         }
 
         public void ReadNES(string file)
         {
-            Cartridge cart = RomParser.Parse("../../../roms/" + file);
+            Cartridge cart = RomParser.Parse("../../../roms/" + romSuiteName + "/rom_singles/" + file);
             Console.WriteLine(cart.rombytes.Length);
 
             for (int i = 0; i < cart.rombytes.Length; i++)
             {
-                bus.Write((ushort)(0x8000 + i), cart.rombytes[i]);
+                bus.Write((ushort) (0x8000 + i), cart.rombytes[i]);
                 if (cart.rombytes.Length == 0x4000)
                 {
-                    bus.Write((ushort)(0xc000 + i), cart.rombytes[i]);
+                    bus.Write((ushort) (0xc000 + i), cart.rombytes[i]);
                 }
             }
+
             for (int i = 0; i < cart.vrombytes.Length; i++)
             {
-                ppubus.Write((ushort)i, cart.vrombytes[i]);      
+                ppubus.Write((ushort) i, cart.vrombytes[i]);
             }
         }
 
@@ -118,13 +128,19 @@ namespace NesSharpTests
 
             ReadOutput();
         }
+    }
 
-        #region vblTests
+    [TestFixture("ppu_vbl_nmi")]
+    public class PPUVBLTests : BasePPUTest
+    {
+        public PPUVBLTests(string romSuiteName) : base(romSuiteName)
+        {
+        }
 
         [Test]
         public void VblBasics()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/01-vbl_basics.nes");
+            ReadNES("01-vbl_basics.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -132,7 +148,7 @@ namespace NesSharpTests
         [Test]
         public void VblSetTime()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/02-vbl_set_time.nes");
+            ReadNES("02-vbl_set_time.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -140,7 +156,7 @@ namespace NesSharpTests
         [Test]
         public void VblClearTime()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/03-vbl_clear_time.nes");
+            ReadNES("03-vbl_clear_time.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -148,7 +164,7 @@ namespace NesSharpTests
         [Test]
         public void NmiControl()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/04-nmi_control.nes");
+            ReadNES("04-nmi_control.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -156,7 +172,7 @@ namespace NesSharpTests
         [Test]
         public void NmiTiming()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/05-nmi_timing.nes");
+            ReadNES("05-nmi_timing.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -164,7 +180,7 @@ namespace NesSharpTests
         [Test]
         public void Suppression()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/06-suppression.nes");
+            ReadNES("06-suppression.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -172,7 +188,7 @@ namespace NesSharpTests
         [Test]
         public void NmiOnTiming()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/07-nmi_on_timing.nes");
+            ReadNES("07-nmi_on_timing.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -180,7 +196,7 @@ namespace NesSharpTests
         [Test]
         public void NmiOffTiming()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/08-nmi_off_timing.nes");
+            ReadNES("08-nmi_off_timing.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -188,7 +204,7 @@ namespace NesSharpTests
         [Test]
         public void EvenOddFrames()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/09-even_odd_frames.nes");
+            ReadNES("09-even_odd_frames.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -196,26 +212,31 @@ namespace NesSharpTests
         [Test]
         public void EvenOddTiming()
         {
-            ReadNES("ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes");
+            ReadNES("10-even_odd_timing.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
+    }
 
-        #endregion
+    [TestFixture("ppu_sprite_hit")]
+    class PPUSpriteHitTests : BasePPUTest
+    {
+        public PPUSpriteHitTests(string romSuiteName) : base(romSuiteName)
+        {
+        }
 
-        #region spriteHitTests
-        
         [Test]
         public void sprite_hit_basics()
         {
-            ReadNES("ppu_sprite_hit/01-basics.nes");
+            ReadNES("01-basics.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
+
         [Test]
         public void sprite_hit_alignment()
         {
-            ReadNES("ppu_sprite_hit/02-alignment.nes");
+            ReadNES("02-alignment.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -223,16 +244,16 @@ namespace NesSharpTests
         [Test]
         public void sprite_hit_corners()
         {
-            ReadNES("ppu_sprite_hit/03-corners.nes");
+            ReadNES("03-corners.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
-        
+
 
         [Test]
         public void sprite_hit_flip()
         {
-            ReadNES("ppu_sprite_hit/04-flip.nes");
+            ReadNES("04-flip.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -240,14 +261,15 @@ namespace NesSharpTests
         [Test]
         public void sprite_hit_left_clip()
         {
-            ReadNES("ppu_sprite_hit/05-left_clip.nes");
+            ReadNES("05-left_clip.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
+
         [Test]
         public void sprite_hit_right_edge()
         {
-            ReadNES("ppu_sprite_hit/06-right_edge.nes");
+            ReadNES("06-right_edge.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -255,14 +277,15 @@ namespace NesSharpTests
         [Test]
         public void sprite_hit_screen_bottom()
         {
-            ReadNES("ppu_sprite_hit/07-screen_bottom.nes");
+            ReadNES("07-screen_bottom.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
+
         [Test]
         public void sprite_hit_double_height()
         {
-            ReadNES("ppu_sprite_hit/08-double_height.nes");
+            ReadNES("08-double_height.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
@@ -270,18 +293,65 @@ namespace NesSharpTests
         [Test]
         public void sprite_hit_timing()
         {
-            ReadNES("ppu_sprite_hit/09-timing.nes");
-            Run();
-            Assert.AreEqual(0, ram.Read(0x6000).Item1);
-        }
-        [Test]
-        public void sprite_hit_timing_order()
-        {
-            ReadNES("ppu_sprite_hit/10-timing_order.nes");
+            ReadNES("09-timing.nes");
             Run();
             Assert.AreEqual(0, ram.Read(0x6000).Item1);
         }
 
-        #endregion
+        [Test]
+        public void sprite_hit_timing_order()
+        {
+            ReadNES("10-timing_order.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000).Item1);
+        }
+    }
+
+    [TestFixture("ppu_sprite_overflow")]
+    class PPUSpriteOverflowTests : BasePPUTest
+    {
+        public PPUSpriteOverflowTests(string romSuiteName) : base(romSuiteName)
+        {
+        }
+        
+        [Test]
+        public void sprite_overflow_basics()
+        {
+            ReadNES("01-basics.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000).Item1);
+        }
+        
+        [Test]
+        public void sprite_overflow_details()
+        {
+            ReadNES("02-details.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000).Item1);
+        }
+        
+        [Test]
+        public void sprite_overflow_timing()
+        {
+            ReadNES("03-timing.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000).Item1);
+        }
+        
+        [Test]
+        public void sprite_overflow_obscure()
+        {
+            ReadNES("04-obscure.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000).Item1);
+        }
+        
+        [Test]
+        public void sprite_overflow_emulator()
+        {
+            ReadNES("05-emulator.nes");
+            Run();
+            Assert.AreEqual(0, ram.Read(0x6000).Item1);
+        }
     }
 }

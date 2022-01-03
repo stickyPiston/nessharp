@@ -98,7 +98,7 @@ namespace NesSharp.PPU
 
         public void Cycle()
         {
-            if (mask.ShowSprites)
+            if (mask.ShowSprites || mask.ShowBackground)
             {
                 DoSpriteFetches();
             }
@@ -328,13 +328,11 @@ namespace NesSharp.PPU
                     {
                         return;
                     }
-
                     if (!secOamFull)
                     {
                         secondaryOam.Write(secOamAddr, tempSpriteByte);
                         int y = secondaryOam.Read((ushort) (secOamAddr & 0xfc));
-                        bool inRange = scanline >= y &&
-                                       (scanline - y) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
+                        bool inRange = scanline >= y && (scanline - y) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
 
                         if (inRange)
                         {
@@ -349,6 +347,27 @@ namespace NesSharp.PPU
                         else
                         {
                             OAMADDR += 4;
+                        }
+                        if (scanline == 135 && false)
+                            Console.WriteLine($"secOamAddr={secOamAddr}\nOAMADDR={OAMADDR}\npixel={pixel}\nscanline={scanline}\ny={y}\n----------------");
+                    }
+                    else
+                    {
+                        bool inRange = scanline >= tempSpriteByte && (scanline - tempSpriteByte) < (control.SpriteSize == SpriteSize._8x8 ? 8 : 16);
+                        if (inRange)
+                        {
+                            if (!status.SpriteOverflow)
+                            {
+                                status.SpriteOverflow = true;
+                                // Console.WriteLine($"Set flag on scanline = {scanline} and pixel = {pixel}");
+                            }
+                            OAMADDR++;
+                        }
+                        else
+                        {
+                            OAMADDR = (byte) (((OAMADDR & 0xfc) + 4) | ((OAMADDR + 1) & 0b11));
+                            if ((OAMADDR & 0xfc) == 0)
+                                oamAddrOverflow = true;
                         }
                     }
 
