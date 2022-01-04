@@ -180,26 +180,11 @@ namespace NesSharp
         
         public double Sample(double t)
         {
-             double a = 0;
-             double b = 0;
-            double p = dutycycle * 2.0 * pi;
+            t = frequency * t;
+            if (t - (int)t < dutycycle)
+                return amplitude;
+            return -amplitude;
 
-             for (double n = 1; n < 20; n++) 
-             { 
-                double c = n * frequency * 2.0 * pi * t; 
-                 a += Approxsin(c) / n; 
-                 b += Approxsin(c - p * n) / n; 
-             } 
-
-             //Console.WriteLine($"A: {amplitude}, a: {a}, b: {b}"); 
-             return (amplitude * 2.0 / pi) * (a - b); 
-             
-        }
-        public double Approxsin(double t)
-        {
-            double j = (double)(t * 0.15915);
-            j = j - (int)j;
-            return (double)(20.785 * j * (j - 0.5) * (j - 1.0f));
         }
     }
 }
