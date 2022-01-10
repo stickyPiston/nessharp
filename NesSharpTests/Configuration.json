@@ -1,0 +1,5 @@
+{
+  "ControllerCount": 2,
+  "Keymap1": ["Q", "E", "Escape", "Space", "W", "S", "A", "D"],
+  "Keymap2": ["U", "O", "Escape", "Space", "I", "K", "J", "L"]
+}
