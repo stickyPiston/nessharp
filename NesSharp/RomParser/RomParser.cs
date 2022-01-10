@@ -69,9 +69,9 @@ namespace NesSharp
                 case 0:
                     cartridge.mapper = new NRom(rombytes, vrombytes);
                     break;
-                // case 4:
-                //     cartridge.mapper = new UxRom();
-                //     break;
+                 case 2:
+                     cartridge.mapper = new UxRom(rombytes, vrombytes);
+                     break;
                 default:
                     throw new Exception($"Mapper {cartridge.mapperType} not yet implemented.");
             }

@@ -410,7 +410,7 @@ namespace NesSharp.PPU
                             break;
                         case 0:
                             isRenderingSpriteZero = secondaryOamHasSpriteZero;
-                            SpriteIndex++;
+                            SpriteIndex = (SpriteIndex + 1) % 8;
                             break;
                     }
                 }
