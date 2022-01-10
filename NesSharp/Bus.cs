@@ -102,7 +102,7 @@ namespace NesSharp {
                 }
                 else
                 {
-                    samples[sampleCounter++] = (short)(apu.output() * 150000);
+                    samples[sampleCounter++] = (short)(apu.output() * 80000);
                 }
             }
 

@@ -26,15 +26,20 @@ namespace NesSharp
         {
             this.bus = bus;
         }
+        //public (byte, byte) Read(UInt16 addr) {
         public (byte, byte) Read(UInt16 addr) {
+            byte value = 0x00;
             if(addr == 0x4015)
-            {   
-                
+            {
+                value |= (byte)((pulse1.p_lc.counter > 0) ? 0x01 : 0x00);
+                value |= (byte)((pulse2.p_lc.counter > 0) ? 0x02 : 0x00);		
+                value |= (byte)((noise.n_lc.counter > 0) ? 0x04 : 0x00);
                 //clears inhibit
-                inhibit4017 = false;
-                return ((byte)(irqset ? 1 << 6 : 0), 0xFF);
+                //inhibit4017 = false;
+                //return ((byte)(irqset ? 1 << 6 : 0), 0xFF);
             }
-            return (0, 0xFF);
+            //return (0, 0xFF);
+            return (0,value);
         }
 
         public void Write(ushort addr, byte value)
@@ -112,6 +117,9 @@ namespace NesSharp
                     pulse2.p_seq.sequence = pulse2.p_seq.new_sequence;
                     pulse2.p_lc.counter = (sbyte)(lc_table[(value & 0xF8) >> 3]);
                     pulse2.p_env.start = true;
+                    break;
+
+                case 0x4008:
                     break;
 
                 case 0x4015:
@@ -229,8 +237,8 @@ namespace NesSharp
 
         bool quarterFrame = false;
         bool halfFrame = false;
-        double clock_counter = 0.0;
-        double clock_counter2 = 0.0;
+        UInt16 clock_counter = 0;
+        UInt16 clock_counter2 = 0;
         readonly double third = 0.3333333333;
         public double globalTime = 0.0;
         /*
@@ -266,24 +274,24 @@ namespace NesSharp
                     // 4-Step Sequence Mode
                     if (clock_counter2 == 3728)
                     {
-                        clock_counter2 += 0.5;
+                        //clock_counter2 += 0.5;
                         quarterFrame = true;
                     }
 
-                    if (clock_counter2 == 7456)
+                    if (clock_counter2 == 7457)
                     {
-                        clock_counter2 += 0.5;
+                        //clock_counter2 += 0.5;
                         quarterFrame = true;
                         halfFrame = true;
                     }
 
-                    if (clock_counter2 == 11185)
+                    if (clock_counter2 == 11186)
                     {
-                        clock_counter2 += 0.5;
+                        //clock_counter2 += 0.5;
                         quarterFrame = true;
                     }
 
-                    if (clock_counter2 == 14914)
+                    if (clock_counter2 == 14915)
                     {
                         //Console.WriteLine("clock counter" + clock_counter2);
                         if (inhibit4017 == false)
@@ -292,10 +300,10 @@ namespace NesSharp
                             Console.WriteLine("HighIRQ sent");
                             bus.HighIRQ(this);
                         }
-                        clock_counter2 += 0.5;
+                        //clock_counter2 += 0.5;
                         quarterFrame = true;
                         halfFrame = true;
-                        clock_counter2 = -1;
+                        clock_counter2 = 0;
                     }
                     if (clock_counter2 == 0)
                         irqset = true;
@@ -373,7 +381,7 @@ namespace NesSharp
             pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
             pulse1.p_osc.amplitude = (double)(pulse1.p_env.output - 1) / 16.0;
             pulse1.p_sample = pulse1.p_osc.Sample(globalTime);
-            pulse1.p_output += (pulse1.p_sample - pulse1.p_output) /** 0.5*/;
+            pulse1.p_output += (pulse1.p_sample - pulse1.p_output) /* 0.5*/;
 
             //pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
             //pulse1.p_osc.amplitude = (double)(pulse1.p_env.output - 1) / 16.0;
@@ -410,8 +418,10 @@ namespace NesSharp
                 noise.n_status,
                 (s) => (((s & 0x0001) ^ ((s & 0x0002) >> 1)) << 14) | ((s & 0x7FFF) >> 1)
             );
-            noise.n_output = noise.n_seq.output * ((noise.n_env.output - 1) / 16.0);
-
+            if (noise.n_lc.counter > 0 && noise.n_seq.counter >= 8)
+            {
+                noise.n_output = noise.n_seq.output * ((noise.n_env.output - 1) / 16.0);
+            }
             pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
             pulse2.p_swp.TrackClock(pulse2.p_seq.reload);
 
@@ -423,13 +433,14 @@ namespace NesSharp
             //Console.WriteLine($"Pulse 1 output: {(((1.0 * pulse1.p_sample) - 0.8) * 0.5 + ((1.0 * pulse2.p_sample) - 0.8) * 0.5) * Int16.MaxValue}");
             //Console.WriteLine($"Pulse 1 output: {((pulse1.p_sample - 0.5) * 0.5 + (pulse2.p_sample - 0.5) * 0.5) * Int16.MaxValue}");
             //Console.WriteLine($"Pulse 1 sample: {(pulse1.p_sample / 2) + (pulse2.p_sample /2) * Int16.MaxValue}");
-            //Console.WriteLine($"Noise sample: {(2.0 * (noise.n_output - 0.8) * 0.05) * 150000}");
+            //Console.WriteLine($"Noise sample: {((noise.n_output - 0.8) * 0.05) * 150000}");
 
             //return (double)(((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) *0.05);
 
-            //return (double)((pulse1.p_output - 0.5) * 0.5 + (pulse2.p_output - 0.5) * 0.5);
+            //return (double)((pulse1.p_output - 0.5) * 0.05 + (pulse2.p_output - 0.5) * 0.05);
             //return (short)((pulse1.p_sample / 2) + (pulse2.p_sample /2));
-            return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) * 0.05) /*+*/ /*(2.0 * (noise.n_output - 0.8)* 0.05) */  );
+            //return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) * 0.05) + ((noise.n_output - 0.8)* 0.00125)  );
+            return (double)((((1.0 * pulse1.p_output + 0.8)) * 0.05 ));
             //return (double)((2.0 * (noise.n_output - 0.8) * 0.05));
         }
     }
