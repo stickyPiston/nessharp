@@ -4,43 +4,62 @@ using System.Text;
 
 namespace NesSharp.Mappers
 {
-    class NRom : BaseMapper
+    class NRomPRG : IAddressable
     {
-        public NRom()
+        byte[] ROM = new byte[0x8000];
+        //No RAM because we don't emulate family BASIC
+
+        public NRomPRG(byte[] RomData)
         {
-            this.prgROM = new byte[0x8000];
-            this.prgRAM = new byte[0x2000];
-            this.chrROM = new byte[0x2000];
+            ROM = new byte[0x8000];
+            if(RomData.Length == 0x8000)
+            {
+                Array.Copy(RomData, ROM, 0x8000);
+            }
+            else 
+            {
+                Array.Copy(RomData, 0, ROM, 0x0000, 0x4000);
+                Array.Copy(RomData, 0, ROM, 0x4000, 0x4000);
+            }
         }
 
-        public override byte ReadChrROM(ushort address)
+        public (byte, byte) Read(ushort addr)
         {
-            return chrROM[address];
+            return (ROM[addr-0x8000], 0xff);
         }
 
-        public override byte ReadPrgRAM(ushort address)
-        {
-            return prgRAM[address];
-        }
-
-        public override byte ReadPrgROM(ushort address)
-        {
-            return prgROM[address];
-        }
-
-        public override void WriteChrROM(ushort address, byte data)
+        public void Write(ushort addr, byte data)
         {
             
         }
+    }
 
-        public override void WritePrgRAM(ushort address, byte data)
+    class NRomCHR : IAddressable
+    {
+        byte[] ROM = new byte[0x2000];
+        //No RAM because we don't emulate family BASIC
+
+        public NRomCHR(byte[] RomData)
         {
-            prgRAM[address] = data;
+            Array.Copy(RomData, ROM, 0x2000);
+        }
+        public (byte, byte) Read(ushort addr)
+        {
+            return (ROM[addr], 0xff);
         }
 
-        public override void WritePrgROM(ushort address, byte data)
+        public void Write(ushort addr, byte data)
         {
-            
+
+        }
+    }
+
+    public class NRom : BaseMapper
+    {
+        public NRom(byte[] PRGData, byte[] CHRData)
+        {
+            PRG = new NRomPRG(PRGData);
+            CHR = new NRomCHR(CHRData);
         }
     }
 }

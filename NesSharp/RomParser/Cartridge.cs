@@ -1,4 +1,5 @@
 ﻿using System;
+using NesSharp.Mappers;
 
 namespace NesSharp 
 {
@@ -20,10 +21,13 @@ namespace NesSharp
 	{
 		public int rombanks, vrombanks, rambanks, mapperType, submapper, prgramSize, eepromSize, chrramSize, chrnvramSize, misrom, expansionDevice;
 		public bool batteryRam, trainer, fourScreen;
-		public byte[] trainerbytes, rombytes, vrombytes, misrombytes;
+		public byte[] misrombytes;
 		public object consoleTypeSpecifics;
 		public MirrorType mirroring;
 		public ConsoleType consoleType;
 		public TimingType timingType;
+		public BaseMapper mapper;
 	}
+	
+	
 }
