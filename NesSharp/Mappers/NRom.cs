@@ -56,10 +56,11 @@ namespace NesSharp.Mappers
 
     public class NRom : BaseMapper
     {
-        public NRom(byte[] PRGData, byte[] CHRData)
+        public NRom(byte[] PRGData, byte[] CHRData, MirrorType mirror)
         {
             PRG = new NRomPRG(PRGData);
             CHR = new NRomCHR(CHRData);
+            Nametables = new Nametables(mirror);
         }
     }
 }

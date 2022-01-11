@@ -81,13 +81,14 @@ namespace NesSharp.Mappers
 
     public class UxRom : BaseMapper
     {
-        public UxRom(byte[] PRGData, byte[] CHRData)
+        public UxRom(byte[] PRGData, byte[] CHRData, MirrorType mirror)
         {
             PRG = new UxRomPRG(PRGData);
             if(CHRData.Length == 0)
                 CHR = new UxRamCHR();
             else
                 CHR = new UxRomCHR(CHRData);
+            Nametables = new Nametables(mirror);
         }
     }
 }

@@ -67,10 +67,10 @@ namespace NesSharp
 
             switch (cartridge.mapperType) {
                 case 0:
-                    cartridge.mapper = new NRom(rombytes, vrombytes);
+                    cartridge.mapper = new NRom(rombytes, vrombytes, cartridge.mirroring);
                     break;
                  case 2:
-                     cartridge.mapper = new UxRom(rombytes, vrombytes);
+                     cartridge.mapper = new UxRom(rombytes, vrombytes, cartridge.mirroring);
                      break;
                 default:
                     throw new Exception($"Mapper {cartridge.mapperType} not yet implemented.");
