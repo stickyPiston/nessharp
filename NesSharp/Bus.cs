@@ -33,6 +33,26 @@ namespace NesSharp {
         }
     }
 
+    public class Combinator : IAddressable {
+        private IAddressable[] parents;
+        private ushort start;
+        private ushort repeat;
+
+        public Combinator(IAddressable[] parents, ushort start, ushort repeat) {
+            this.parents = parents;
+            this.start = start;
+            this.repeat = repeat;
+        }
+
+        public (byte, byte) Read(ushort addr) {
+            return parents[(addr - start) / repeat].Read(addr);
+        }
+
+        public void Write(ushort addr, byte data) {
+            parents[(addr - start) / repeat].Write(addr, data);
+        }
+    }
+
     public class Bus {
         private CPU cpu;
         private PPU.PPU ppu;
