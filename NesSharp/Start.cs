@@ -200,7 +200,7 @@ namespace NesSharp {
             ppubus.Palettes = new PPUPalettes();
 
             RandomRam nametables = new RandomRam();
-            ppubus.Nametables = cart.mirroring == MirrorType.vertical ? (IAddressable) new Repeater(new RandomRam(), 0, 0x800) : (IAddressable) new Combinator(new IAddressable[] {new Repeater(nametables, 0x2000, 0x400), new Repeater(nametables, 0x2800, 0x400)}, 0x2000, 0x800);
+            ppubus.Nametables = cart.mirroring == MirrorType.vertical ? (IAddressable) new Repeater(new RandomRam(), 0, 0x800) : (IAddressable) new Combinator(new IAddressable[] {new Repeater(nametables, 0x0000, 0x400), new Repeater(nametables, 0x0800, 0x400)}, 0x0000, 0x800);
             ppubus.Patterntables = cart.mapper.CHR;
 
             bus.Register(ppu);
