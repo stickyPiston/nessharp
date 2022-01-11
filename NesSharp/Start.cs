@@ -108,7 +108,7 @@ namespace NesSharp {
 
                 Application.Instance.InvokeAsync(() => { if (running) emulator.Render(); });
                 
-                Console.WriteLine(1/c.ElapsedTime.AsSeconds());
+                //Console.WriteLine(1/c.ElapsedTime.AsSeconds());
                 c.Restart();
             }
         }

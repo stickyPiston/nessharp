@@ -61,7 +61,7 @@ namespace NesSharp {
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
 
-        private short[] samples = new short[16538];
+        private short[] samples = new short[13538];
         private ushort sampleCounter = 0;
 
         public void Tick() {
@@ -92,17 +92,18 @@ namespace NesSharp {
 
             if (clock == 0)
             {
-                if (sampleCounter == 11025)
+                if (sampleCounter == 13538)
                 {// 512, 768, 1024, 2048, 2304, 2321, 2560
                     var buffer = new SoundBuffer(samples, 1, 44100);//44100
                     var sound = new Sound(buffer);
                     sound.Play();
+                    Console.WriteLine(apu.output() * 10000);
                     sampleCounter = 0;
-                    Array.Clear(samples, 0, 11025);
+                    Array.Clear(samples, 0, 13538);
                 }
                 else
                 {
-                    samples[sampleCounter++] = (short)(apu.output() * 80000);
+                    samples[sampleCounter++] = (short)(apu.output() * 10000);
                 }
             }
 

@@ -17,9 +17,9 @@ namespace NesSharp
                                     26, 16, 28, 32, 30};
 
         //https://www.nesdev.org/2A03%20technical%20reference.txt
-        public Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, false, 1);
-        public Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, false, 1);
-        public Noise noise = new Noise(false, false, 0.0, 0.0, 0xDBDB, 0x0000, false, 1);
+        public Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, 0x0000, 0x0000, false, 1, false);
+        public Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, 0x0000, 0x0000, false, 1, false);
+        public Noise noise = new Noise(false, false, 0.0, 0.0, 0x0000, 0xDBDB, 0x0000, false, 1, false);
 
         //public double globalTime = 0.0;
         public X2A03(Bus bus)
@@ -39,7 +39,7 @@ namespace NesSharp
                 //return ((byte)(irqset ? 1 << 6 : 0), 0xFF);
             }
             //return (0, 0xFF);
-            return (0,value);
+            return (value,0xFF);
         }
 
         public void Write(ushort addr, byte value)
@@ -59,7 +59,7 @@ namespace NesSharp
 
                     }
                     pulse1.p_seq.sequence = pulse1.p_seq.new_sequence;
-                    //pulse1.p_halt = Convert.ToBoolean(value & 0x20);//Convert.ToBoolean
+                    pulse1.p_halt = Convert.ToBoolean(value & 0x20);//Convert.ToBoolean
                     pulse1.p_env.volume = Convert.ToUInt16(value & 0x0F);
                     pulse1.p_env.disable = Convert.ToBoolean(value & 0x10); //Convert.ToBoolean
                     break;
@@ -70,6 +70,7 @@ namespace NesSharp
                     pulse1.p_swp.divider = (sbyte)(Convert.ToByte(value & 0x70) >> 4);
                     pulse1.p_swp.shift = (sbyte)(value & 0x07);
                     pulse1.p_swp.reload = true;
+                    pulse1.p_swp.channel = true;
                     break;
 
                 case 0x4002:
@@ -94,7 +95,7 @@ namespace NesSharp
                         case 0x03: pulse2.p_seq.new_sequence = 0b10011111; pulse2.p_osc.dutycycle = 0.750; break;
                     }
                     pulse2.p_seq.sequence = pulse2.p_seq.new_sequence;
-                    //pulse2.p_halt = Convert.ToBoolean(value & 0x20); //Convert.ToBoolean
+                    pulse2.p_halt = Convert.ToBoolean(value & 0x20); //Convert.ToBoolean
                     pulse2.p_env.volume = Convert.ToUInt16(value & 0x0F);
                     pulse2.p_env.disable = Convert.ToBoolean(value & 0x10); //Convert.ToBoolean
                     break;
@@ -105,6 +106,7 @@ namespace NesSharp
                     pulse2.p_swp.divider = (sbyte)(Convert.ToByte(value & 0x70) >> 4);
                     pulse2.p_swp.shift = (sbyte)(value & 0x07);
                     pulse2.p_swp.reload = true;
+                    pulse2.p_swp.channel = false;
                     break;
 
                 case 0x4006:
@@ -136,7 +138,7 @@ namespace NesSharp
 
                     //inhibit
                     inhibit4017 = (value & 0x40) > 0;
-                    //Console.WriteLine("inhibit" + inhibit4017);
+                    Console.WriteLine("inhibit" + inhibit4017);
                     break;
 
                 case 0x400C:
@@ -148,19 +150,19 @@ namespace NesSharp
                 case 0x400E:
                     switch (value & 0x0F)
                     {
-                        case 0x00: noise.n_seq.reload = 0; break;
-                        case 0x01: noise.n_seq.reload = 4; break;
-                        case 0x02: noise.n_seq.reload = 8; break;
-                        case 0x03: noise.n_seq.reload = 16; break;
-                        case 0x04: noise.n_seq.reload = 32; break;
-                        case 0x05: noise.n_seq.reload = 64; break;
-                        case 0x06: noise.n_seq.reload = 96; break;
-                        case 0x07: noise.n_seq.reload = 128; break;
-                        case 0x08: noise.n_seq.reload = 160; break;
-                        case 0x09: noise.n_seq.reload = 202; break;
-                        case 0x0A: noise.n_seq.reload = 254; break;
-                        case 0x0B: noise.n_seq.reload = 380; break;
-                        case 0x0C: noise.n_seq.reload = 508; break;
+                        case 0x00: noise.n_seq.reload = 4; break;
+                        case 0x01: noise.n_seq.reload = 8; break;
+                        case 0x02: noise.n_seq.reload = 16; break;
+                        case 0x03: noise.n_seq.reload = 32; break;
+                        case 0x04: noise.n_seq.reload = 64; break;
+                        case 0x05: noise.n_seq.reload = 96; break;
+                        case 0x06: noise.n_seq.reload = 128; break;
+                        case 0x07: noise.n_seq.reload = 160; break;
+                        case 0x08: noise.n_seq.reload = 202; break;
+                        case 0x09: noise.n_seq.reload = 254; break;
+                        case 0x0A: noise.n_seq.reload = 380; break;
+                        case 0x0B: noise.n_seq.reload = 508; break;
+                        case 0x0C: noise.n_seq.reload = 762; break;
                         case 0x0D: noise.n_seq.reload = 1016; break;
                         case 0x0E: noise.n_seq.reload = 2034; break;
                         case 0x0F: noise.n_seq.reload = 4068; break;
@@ -188,19 +190,21 @@ namespace NesSharp
             public Envelope p_env;
             public Sweeper p_swp;
             public Lengthcounter p_lc;
+            
             public double globalTime;
 
-            public Pulse(bool x, bool y, double a, double b, uint z, ushort h, bool i, sbyte j)
+
+            public Pulse(bool x, bool y, double a, double b, uint c, uint z, ushort g, ushort h, bool i, sbyte j, bool k)
             {
                 p_status = x;
                 p_halt = y;
                 p_sample = a;
                 p_output = b;
 
-                p_seq = new Sequencer(z, h);
+                p_seq = new Sequencer(c, g);
                 p_osc = new Oscillator(z);
                 p_env = new Envelope(i, h);
-                p_swp = new Sweeper(i, j);
+                p_swp = new Sweeper(i, j, k);
                 p_lc = new Lengthcounter(j);
             }
         }
@@ -213,23 +217,21 @@ namespace NesSharp
             public double n_sample;
             public double n_output;
             public Sequencer n_seq;
-            public Oscillator n_osc;
             public Envelope n_env;
             public Sweeper n_swp;
             public Lengthcounter n_lc;
-            public double globalTime;
+            
 
-            public Noise(bool x, bool y, double a, double b, uint z, ushort h, bool i, sbyte j)
+            public Noise(bool x, bool y, double a, double b, uint z, ushort g, ushort h, bool i, sbyte j, bool k)
             {
                 n_status = x;
                 n_halt = y;
                 n_sample = a;
                 n_output = b;
 
-                n_seq = new Sequencer(z, h);
-                n_osc = new Oscillator(z);
+                n_seq = new Sequencer(z, g);
                 n_env = new Envelope(i, h);
-                n_swp = new Sweeper(i, j);
+                n_swp = new Sweeper(i, j, k);
                 n_lc = new Lengthcounter(j);
             }
 
@@ -297,7 +299,7 @@ namespace NesSharp
                         if (inhibit4017 == false)
                         {
 
-                            Console.WriteLine("HighIRQ sent");
+                            //Console.WriteLine("HighIRQ sent");
                             bus.HighIRQ(this);
                         }
                         //clock_counter2 += 0.5;
@@ -356,10 +358,10 @@ namespace NesSharp
                         quarterFrame = true;
                         halfFrame = true;
                         clock_counter2 = 0;
-                        
+
                     }
 
-                        if (quarterFrame == true)
+                    if (quarterFrame == true)
                     {
                         pulse1.p_env.ApuClock(pulse1.p_halt);
                         pulse2.p_env.ApuClock(pulse2.p_halt);
@@ -376,12 +378,17 @@ namespace NesSharp
 
                     }
                 }
-            }
 
+            //pulse1.p_seq.Clock(
+            //    pulse1.p_status,
+            //    (s) => ((s & 0x0001) << 7) | ((s & 0x00FE) >> 1)
+            //);
+            //pulse1.p_sample = pulse1.p_seq.output;
             pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
             pulse1.p_osc.amplitude = (double)(pulse1.p_env.output - 1) / 16.0;
             pulse1.p_sample = pulse1.p_osc.Sample(globalTime);
             pulse1.p_output += (pulse1.p_sample - pulse1.p_output) /* 0.5*/;
+
 
             //pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
             //pulse1.p_osc.amplitude = (double)(pulse1.p_env.output - 1) / 16.0;
@@ -420,28 +427,36 @@ namespace NesSharp
             );
             if (noise.n_lc.counter > 0 && noise.n_seq.counter >= 8)
             {
-                noise.n_output = noise.n_seq.output * ((noise.n_env.output - 1) / 16.0);
+                noise.n_output = (double)noise.n_seq.output * ((double)(noise.n_env.output - 1) / 16.0);
             }
-            pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
-            pulse2.p_swp.TrackClock(pulse2.p_seq.reload);
 
-            clock_counter++;
+                if (!pulse1.p_status) pulse1.p_output = 0;
+                if (!pulse2.p_status) pulse2.p_output = 0;
+                if (!noise.n_status) noise.n_output = 0;
         }
+        pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
+        pulse2.p_swp.TrackClock(pulse2.p_seq.reload);
+
+        clock_counter++;
+}
 
         public double output()
         {
             //Console.WriteLine($"Pulse 1 output: {(((1.0 * pulse1.p_sample) - 0.8) * 0.5 + ((1.0 * pulse2.p_sample) - 0.8) * 0.5) * Int16.MaxValue}");
             //Console.WriteLine($"Pulse 1 output: {((pulse1.p_sample - 0.5) * 0.5 + (pulse2.p_sample - 0.5) * 0.5) * Int16.MaxValue}");
             //Console.WriteLine($"Pulse 1 sample: {(pulse1.p_sample / 2) + (pulse2.p_sample /2) * Int16.MaxValue}");
-            //Console.WriteLine($"Noise sample: {((noise.n_output - 0.8) * 0.05) * 150000}");
+            //Console.WriteLine($"Noise sample: {(2.0 *(noise.n_output - 0.5) * 0.1) * 150000}");
+            //Console.WriteLine($"Pulse 1 output: {(((1.0 * pulse1.p_output) - 0.8) * 0.5) * 100000}");
 
             //return (double)(((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) *0.05);
 
             //return (double)((pulse1.p_output - 0.5) * 0.05 + (pulse2.p_output - 0.5) * 0.05);
             //return (short)((pulse1.p_sample / 2) + (pulse2.p_sample /2));
-            //return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) * 0.05) + ((noise.n_output - 0.8)* 0.00125)  );
-            return (double)((((1.0 * pulse1.p_output + 0.8)) * 0.05 ));
-            //return (double)((2.0 * (noise.n_output - 0.8) * 0.05));
+
+            return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) * 0.05) + (4.0 * (noise.n_output - 0.5)* 0.05)  );
+
+            //return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 ));
+            //return (double)((8.0 * (noise.n_output - 0.5)));
         }
     }
 }

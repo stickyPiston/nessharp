@@ -94,14 +94,16 @@ namespace NesSharp
         private sbyte timer = 0x00;
         private ushort change = 0;
         public bool mute = false;
+        public bool channel; //1 = p1, 0 = p2
 
-        public Sweeper(bool x, sbyte z)
+        public Sweeper(bool x, sbyte y, bool z)
         {
             enabled = x;
             down = x;
             reload = x;
-            divider = z;
-            shift = z;
+            divider = y;
+            shift = y;
+            channel = z;
 
         }
 
@@ -170,8 +172,6 @@ namespace NesSharp
         public double dutycycle = 0;
         public double frequency = 0;
         public double amplitude = 1;
-        double pi = 3.141592653;
-        //public double harmonics = 20;
 
         public Oscillator(uint z)
         {
@@ -183,7 +183,8 @@ namespace NesSharp
             t = frequency * t;
             if (t - (int)t < dutycycle)
                 return amplitude;
-            return -amplitude;
+            else
+                return -amplitude;
 
         }
     }
