@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System;
 
+using NesSharp.Mappers;
+
 namespace NesSharp {
     public struct Range {
         public ushort start;
@@ -56,6 +58,7 @@ namespace NesSharp {
     public class Bus {
         private CPU cpu;
         private PPU.PPU ppu;
+        private BaseMapper mapper;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
@@ -65,6 +68,10 @@ namespace NesSharp {
         private int OAMDMACycles = 0;
         private byte OAMDATA = 0;
         private ushort DMACopyAddr;
+
+        public bool IsIRQHigh() {
+            return mapper != null && mapper.IRQ;
+        }
 
         //public Run(string romFilepath) { when the emulator accepts roms
         public void RunFrame() {
@@ -120,18 +127,6 @@ namespace NesSharp {
             cpu.HighNMI();
         }
 
-        /// <summary>Keeps the IRQ line from the sender to the CPU high, until LowIRQ is called.</summary>
-        public void HighIRQ(object sender)
-        {
-            cpu.HighIRQ(sender);
-        }
-
-        /// <summary>Resets the IRQ line from the sender to the CPU.</summary>
-        public void LowIRQ(object sender)
-        {
-            cpu.LowIRQ(sender);
-        }
-
         public void Register(IAddressable chip, Range[] ranges) {
             chips.Add(chip);
             foreach(var range in ranges)
@@ -148,6 +143,21 @@ namespace NesSharp {
         public void Register(PPU.PPU ppu)
         {
             this.ppu = ppu;
+            ppu.bus.Palettes = new PPU.PPUPalettes();
+
+            Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
+            Register(ppu, new []{new Range(0x4014, 0x4014)});
+        }
+
+        public void Register(BaseMapper mapper)
+        {
+            ppu.bus.Nametables = mapper.Nametables;
+            ppu.bus.Patterntables = mapper.CHR;
+            Register(mapper.PRG, new[] { new Range(0x8000, 0xffff) });
+
+            if (mapper.PRGRAM != null) {
+                Register(mapper.PRGRAM, new Range[] {new Range(0x6000, 0x7FFF)});
+            }
         }
 
         public byte Read(ushort addr) {
@@ -176,7 +186,7 @@ namespace NesSharp {
                 }
            }
 
-           throw new Exception($"Can't write to {addr:x4}");
+           // throw new Exception($"Can't write to {addr:x4}");
         }
     };
 }

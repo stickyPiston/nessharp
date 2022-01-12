@@ -13,7 +13,7 @@ namespace NesSharp
             if (bytes[0] == 'N' && bytes[1] == 'E' && bytes[2] == 'S' && bytes[3] == 0x1a)
             {
                 // return ((bytes[7] & 2) == 0 && (bytes[7] & 4) == 4) ? ParseNes2(bytes) : ParseINes(bytes);
-                return ParseINes(bytes);
+                return ParseINes(bytes, filename);
             }
             else
             {
@@ -23,7 +23,7 @@ namespace NesSharp
             return null;
         }
 
-        public static Cartridge ParseINes(byte[] bytes)
+        public static Cartridge ParseINes(byte[] bytes, string filename)
         {
             var cartridge = new Cartridge();
 
@@ -32,7 +32,7 @@ namespace NesSharp
             cartridge.mirroring = (bytes[6] & 1) > 0 ? MirrorType.vertical : MirrorType.horizontal;
             cartridge.batteryRam = (bytes[6] & 2) > 0;
             cartridge.trainer = (bytes[6] & 4) > 0;
-            cartridge.fourScreen = (bytes[6] & 8) > 0;
+            cartridge.mirroring = (bytes[6] & 8) > 0 ? MirrorType.fourScreen : cartridge.mirroring;
             cartridge.mapperType = (bytes[6] & 0xF0) >> 4;
 
             cartridge.consoleType = (bytes[7] & 1) > 0 ? ConsoleType.VSYS : ConsoleType.NES;
@@ -71,6 +71,9 @@ namespace NesSharp
                     break;
                  case 2:
                      cartridge.mapper = new UxRom(rombytes, vrombytes, cartridge.mirroring);
+                     break;
+                 case 4:
+                     cartridge.mapper = new MMC3(rombytes, vrombytes, cartridge.mirroring);
                      break;
                 default:
                     throw new Exception($"Mapper {cartridge.mapperType} not yet implemented.");

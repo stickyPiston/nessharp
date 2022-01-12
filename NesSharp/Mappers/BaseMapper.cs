@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.IO;
 
 namespace NesSharp.Mappers
 {
@@ -8,7 +7,37 @@ namespace NesSharp.Mappers
     {
         public IAddressable PRG;
         public IAddressable CHR;
-        public IAddressable Nametables;
+        public IAddressable PRGRAM;
+        public Nametables Nametables;
+        public bool IRQ;
+    }
+
+    public class SaveRAM : IAddressable {
+        
+        private byte[] RAM = new byte[0x2000];
+        private string saveFile;
+
+        public SaveRAM() {}
+
+        public SaveRAM(string file) {
+            this.saveFile = file;
+            if (file != null && File.Exists(file)) {
+                byte[] save = File.ReadAllBytes(file);
+                if (save.Length == RAM.Length) RAM = save;
+            }
+        }
+
+        public (byte, byte) Read(ushort addr) {
+            return (RAM[addr - 0x6000], 0xFF);
+        }
+
+        public void Write(ushort addr, byte data) {
+            RAM[addr - 0x6000] = data;
+            if (saveFile != null) {
+                File.WriteAllBytes(saveFile, RAM);
+            }
+        }
+
     }
 
     public class Nametables : IAddressable {
@@ -26,6 +55,8 @@ namespace NesSharp.Mappers
                     return (RAM[(ushort) (addr & 0b101111111111)], 0xFF);
                 case MirrorType.vertical:
                     return (RAM[(ushort) (addr & 0b011111111111)], 0xFF);
+                case MirrorType.fourScreen:
+                    return (RAM[addr], 0xFF);
             }
             throw new Exception();
         }
@@ -37,6 +68,9 @@ namespace NesSharp.Mappers
                     return;
                 case MirrorType.vertical:
                     RAM[(ushort) (addr & 0b011111111111)] = data;
+                    return;
+                case MirrorType.fourScreen:
+                    RAM[addr] = data;
                     return;
             }
             throw new Exception();

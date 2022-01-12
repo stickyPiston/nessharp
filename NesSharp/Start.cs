@@ -196,21 +196,14 @@ namespace NesSharp {
             
             // Create PPU
             PPU.PPU ppu = new PPU.PPU(im, bus);
-            PPUMemoryBus ppubus = ppu.bus;
-            ppubus.Palettes = new PPUPalettes();
-
-            RandomRam nametables = new RandomRam();
-            ppubus.Nametables = cart.mapper.Nametables;
-            ppubus.Patterntables = cart.mapper.CHR;
-
             bus.Register(ppu);
-            bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
-            bus.Register(ppu, new []{new Range(0x4014, 0x4014)});
-            RAM ram = new RAM(0x10000);
-            bus.Register(ram, new []{ new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)});
-            bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0x800, 0x1fff)});
 
-            bus.Register(cart.mapper.PRG, new[] { new Range(0x8000, 0xffff) });
+            // Create RAM
+            RAM ram = new RAM(0x10000);
+            bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0, 0x1fff)});
+
+            // Create Mapper
+            bus.Register(cart.mapper);
         }
 
         public static void Main() { }
