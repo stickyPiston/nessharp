@@ -24,7 +24,7 @@ namespace NesSharp
             var Keymap = (this.number == 1) ? Keymap1 : Keymap2;
             foreach (var key in Keymap)
             {
-                register = (byte)((register << 1) | (IsKeyPressed(key) ? 1 : 0));
+                register = (byte)((register << 1) | (InputManager.keysPressed.Contains(key) ? 1 : 0));
             }
             counter = 8;
         }
