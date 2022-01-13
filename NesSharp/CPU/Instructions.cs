@@ -245,7 +245,7 @@ namespace NesSharp
             }
 
             // Rest of the instructions
-            instructions[0x00] = new Instruction("BRK impl",  AddressingMode.IMP, false, new Cycle[] { PushPCH, PushPCL, PushP(true), PCLowFromAddr(0xFFFE), PCHighFromAddr(0xFFFF) });
+            instructions[0x00] = new Instruction("BRK impl",  AddressingMode.IMM, false, new Cycle[] { PushPCH, PushPCL, PushP(true), PCLowFromAddr(0xFFFE), PCHighFromAddr(0xFFFF) });
             instructions[0x20] = new Instruction("JSR abs",   AddressingMode.IMM, false, new Cycle[] { DummyReadAtSP, PushPCH, PushPCL, JumpPC });
             instructions[0x40] = new Instruction("RTI impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullP(true), PullPCL, PullPCH });
             instructions[0x60] = new Instruction("RTS impl",  AddressingMode.IMP, false, new Cycle[] { IncSP, PullPCL, PullPCH, ValFromPC });
