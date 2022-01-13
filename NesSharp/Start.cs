@@ -178,8 +178,7 @@ namespace NesSharp {
         public void SetupCartridge(string file) {
             // Load config
             // TODO maybe other place
-            string source = File.ReadAllText("/Users/job/Desktop/code/nessharp-og/NesSharp/Configuration.json");
-            ConfigurationManager.LoadConfiguration(source);
+            ConfigurationManager.LoadConfiguration();
             
             
             // Create Bus, CPU, and ControllerPort
