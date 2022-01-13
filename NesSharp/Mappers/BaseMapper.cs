@@ -42,17 +42,22 @@ namespace NesSharp.Mappers
 
     public class Nametables : IAddressable {
 
-        private byte[] RAM = new byte[0x1000];
+        private byte[] RAM = new byte[0x800];
         public MirrorType mirror;
 
         public Nametables(MirrorType mirror) {
             this.mirror = mirror;
+            if (mirror == MirrorType.fourScreen) RAM = new byte[0x1000];
         }
 
         public (byte, byte) Read(ushort addr) {
             switch (mirror) {
+                case MirrorType.lower:
+                    return (RAM[(ushort) (addr & 0b001111111111)], 0xFF);
+                case MirrorType.upper:
+                    return (RAM[(ushort) (addr & 0b001111111111) | 0b010000000000], 0xFF);
                 case MirrorType.horizontal:
-                    return (RAM[(ushort) (addr & 0b101111111111)], 0xFF);
+                    return (RAM[(ushort) ((addr & 0b001111111111) + ((addr & 0b100000000000) >> 1))], 0xFF);
                 case MirrorType.vertical:
                     return (RAM[(ushort) (addr & 0b011111111111)], 0xFF);
                 case MirrorType.fourScreen:
@@ -63,8 +68,14 @@ namespace NesSharp.Mappers
 
         public void Write(ushort addr, byte data) {
             switch (mirror) {
+                case MirrorType.lower:
+                    RAM[(ushort) (addr & 0b001111111111)] = data;
+                    return;
+                case MirrorType.upper:
+                    RAM[(ushort) (addr & 0b001111111111) | 0b010000000000] = data;
+                    return;
                 case MirrorType.horizontal:
-                    RAM[(ushort) (addr & 0b101111111111)] = data;
+                    RAM[(ushort) ((addr & 0b001111111111) + ((addr & 0b100000000000) >> 1))] = data;
                     return;
                 case MirrorType.vertical:
                     RAM[(ushort) (addr & 0b011111111111)] = data;

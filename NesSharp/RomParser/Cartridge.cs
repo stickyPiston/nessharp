@@ -3,7 +3,7 @@ using NesSharp.Mappers;
 
 namespace NesSharp 
 {
-	public enum MirrorType {vertical, horizontal, fourScreen};
+	public enum MirrorType {lower, upper, vertical, horizontal, fourScreen};
 	public enum ConsoleType {NES, VSYS, PC10, ECT};
 	public enum TimingType {NTSC, PAL, MR, DENDY};
 

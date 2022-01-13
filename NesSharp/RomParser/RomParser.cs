@@ -69,6 +69,9 @@ namespace NesSharp
                 case 0:
                     cartridge.mapper = new NRom(rombytes, vrombytes, cartridge.mirroring);
                     break;
+                case 1:
+                    cartridge.mapper = new MMC1(rombytes, vrombytes, cartridge.mirroring, cartridge.batteryRam ? filename + ".save" : null);
+                    break;
                  case 2:
                      cartridge.mapper = new UxRom(rombytes, vrombytes, cartridge.mirroring);
                      break;
