@@ -99,6 +99,8 @@ namespace NesSharp {
 
         public void Run() {
             Clock c = new Clock();
+            long frame = 0;
+            long last = c.ElapsedTime.AsMilliseconds();
             // Run Emulator
             while (running)
             {
@@ -108,8 +110,20 @@ namespace NesSharp {
 
                 Application.Instance.InvokeAsync(() => { if (running) emulator.Render(); });
                 
-                /* Console.WriteLine(1/c.ElapsedTime.AsSeconds()); */
-                c.Restart();
+                long time = c.ElapsedTime.AsMilliseconds();
+                frame++;
+
+                if (frame % 60 == 0) {
+                    Console.WriteLine("60 frames in " + (time - last) + " milliseconds");
+                    last = time;
+                }
+
+                // Comment the following 5 lines out to remove frame limiter
+                long f = time * 60 / 1000 + 1;
+                while (time < 1000.0 / 60 * f) {
+                    Thread.Sleep(1);
+                    time = c.ElapsedTime.AsMilliseconds();
+                }
             }
         }
 
