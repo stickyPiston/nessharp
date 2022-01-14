@@ -256,6 +256,10 @@ namespace NesSharp.PPU
                         ShiftRegs();
                         DoBackgroundFetches();
                     }
+                    else if (pixel >= 337 && pixel <= 340)
+                    {
+                        DoBackgroundFetches();
+                    }
                     //throw new System.NotImplementedException();
                 }
                 else if (scanline == 261)
@@ -281,6 +285,10 @@ namespace NesSharp.PPU
                     else if (pixel >= 321 && pixel <= 336)
                     {
                         ShiftRegs();
+                        DoBackgroundFetches();
+                    }
+                    else if (pixel >= 337 && pixel <= 340)
+                    {
                         DoBackgroundFetches();
                     }
                 }
@@ -348,8 +356,6 @@ namespace NesSharp.PPU
                         {
                             OAMADDR += 4;
                         }
-                        if (scanline == 135 && false)
-                            Console.WriteLine($"secOamAddr={secOamAddr}\nOAMADDR={OAMADDR}\npixel={pixel}\nscanline={scanline}\ny={y}\n----------------");
                     }
                     else
                     {
