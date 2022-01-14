@@ -55,6 +55,14 @@ namespace NesSharp {
             }
         }
 
+        public void Reset() {
+            cpu.Reset();
+            ppu.Reset();
+            OAMDMACycles = 0;
+            OAMDATA = 0;
+            clock = 0;
+        }
+
         public void BeginOAM(ushort DMACopyAddr) {
             OAMDMACycles = clock < 3 ? 514 : 513;
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);

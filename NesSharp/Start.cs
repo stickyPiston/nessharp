@@ -58,7 +58,8 @@ namespace NesSharp {
 
             this.Menu = new MenuBar();
             ButtonMenuItem item = new ButtonMenuItem { Text = "File" };
-            item.Items.Add(new ButtonMenuItem(Open) { Text = "Open..." });
+            item.Items.Add(new ButtonMenuItem(Open) { Text = "Open ROM..." });
+            item.Items.Add(new ButtonMenuItem(OpenMovie) { Text = "Open Movie..." });
             item.Items.Add(new ButtonMenuItem(Close) { Text = "Close" });
             this.Menu.Items.Add(item);
             
@@ -67,6 +68,18 @@ namespace NesSharp {
 
         public static void Start(string platform) {
             new Application(platform).Run(new MainForm());
+        }
+
+        public void OpenMovie(object o, EventArgs e) {
+            var dialog = new OpenFileDialog();
+            if (dialog.ShowDialog(this) == DialogResult.Ok) {
+                if (running) {
+                    Monitor.Enter(m_lock);
+                        emulator.OpenMovie(dialog.FileName);
+                    Monitor.Exit(m_lock);
+                } else {
+                }
+            }
         }
 
         public void Open(object o, EventArgs e) {
@@ -99,6 +112,8 @@ namespace NesSharp {
 
         public void Run() {
             Clock c = new Clock();
+            long frame = 0;
+            long last = c.ElapsedTime.AsMilliseconds();
             // Run Emulator
             while (running)
             {
@@ -108,8 +123,20 @@ namespace NesSharp {
 
                 Application.Instance.InvokeAsync(() => { if (running) emulator.Render(); });
                 
-                /* Console.WriteLine(1/c.ElapsedTime.AsSeconds()); */
-                c.Restart();
+                long time = c.ElapsedTime.AsMilliseconds();
+                frame++;
+
+                if (frame % 60 == 0) {
+                    Console.WriteLine("60 frames in " + (time - last) + " milliseconds");
+                    last = time;
+                }
+
+                // Comment the following 5 lines out to remove frame limiter
+                long f = time * 60 / 1000 + 1;
+                while (time < 1000.0 / 60 * f) {
+                    Thread.Sleep(1);
+                    time = c.ElapsedTime.AsMilliseconds();
+                }
             }
         }
 
@@ -121,6 +148,9 @@ namespace NesSharp {
         private RenderWindow rw;
         private Sprite s;
         private Bus bus;
+        private ControllerPort controllerPort;
+        private IMovie movie;
+        private string file;
 
         public void Render() {
             Update();
@@ -148,8 +178,30 @@ namespace NesSharp {
             }
         }
 
+        public void OpenMovie(string path) {
+            movie = new FM2(File.ReadAllLines(path));
+            controllerPort.register(new PlayerController(0, movie), 0);
+            controllerPort.register(new PlayerController(1, movie), 1);
+        }
+
         public void RunFrame() {
+            if (movie != null) {
+                Reset reset = movie.GetReset();
+                switch (reset) {
+                    case Reset.SOFT:
+                        bus.Reset();
+                        break;
+                    case Reset.POWER:
+                        SetupCartridge(file);
+                        break;
+                }
+            }
+
             bus.RunFrame();
+
+            if (movie != null) {
+                movie.Advance();
+            }
         }
 
         public void Close() {
@@ -179,17 +231,20 @@ namespace NesSharp {
             // Load config
             // TODO maybe other place
             ConfigurationManager.LoadConfiguration();
-            
+            this.file = file;
             
             // Create Bus, CPU, and ControllerPort
             bus = new Bus();
             var cpu = new CPU(bus);
-            var controllerPort = new ControllerPort();
 
-            var controller1 = new Controller(1);
-            var controller2 = new Controller(2);
-            controllerPort.register(controller1);
-            controllerPort.register(controller2);
+            if (controllerPort == null) {
+                controllerPort = new ControllerPort();
+
+                var controller1 = new Controller(1);
+                var controller2 = new Controller(2);
+                controllerPort.register(controller1, 0);
+                controllerPort.register(controller2, 1);
+            }
             bus.Register(cpu);
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            

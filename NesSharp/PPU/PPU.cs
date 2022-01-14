@@ -551,7 +551,12 @@ namespace NesSharp.PPU
 
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            ODDFRAME = false;
+            control.FromByte(0);
+            mask.FromByte(0);
+            Write(0x2005, 0);
+            Write(0x2005, 0);
+            w = false;
         }
 
         //source: https://wiki.nesdev.org/w/index.php?title=PPU_scrolling
