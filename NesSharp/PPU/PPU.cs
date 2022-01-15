@@ -35,8 +35,8 @@ namespace NesSharp.PPU
         private byte PaletteShift2;
 
         private bool ODDFRAME;
-        private uint pixel;
-        private uint scanline;
+        public uint pixel;
+        public uint scanline;
 
         private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
         private SpriteAttribute[] spriteAttributeLatches = new SpriteAttribute[8];
@@ -53,8 +53,8 @@ namespace NesSharp.PPU
             mask = new PPUMASK();
             status = new PPUSTATUS
             {
-                VblankStarted = true,
-                SpriteOverflow = true
+                // VblankStarted = true,
+                // SpriteOverflow = true
             };
             ODDFRAME = false;
 
@@ -559,7 +559,12 @@ namespace NesSharp.PPU
 
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            ODDFRAME = false;
+            control.FromByte(0);
+            mask.FromByte(0);
+            Write(0x2005, 0);
+            Write(0x2005, 0);
+            w = false;
         }
 
         //source: https://wiki.nesdev.org/w/index.php?title=PPU_scrolling

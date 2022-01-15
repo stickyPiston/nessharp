@@ -140,6 +140,11 @@ namespace NesSharp
         {
             SetInstruction(RESETInstruction);
             this.cycle = 0;
+            this.incomingNMI = false;
+            this.prevIncomingNMI = false;
+            this.polled = null;
+            this.prevpolled = null;
+            this.prevprevpolled = null;
         }
 
         public void LowNMI()

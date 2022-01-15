@@ -27,8 +27,8 @@ namespace NesSharpTests
 
         [SetUp]
         public void Setup() {
-            cp.register(new EmulatedKeyboard());
-            cp.register(new EmulatedKeyboard());
+            cp.register(new EmulatedKeyboard(), 0);
+            cp.register(new EmulatedKeyboard(), 1);
         }
 
         [Test(Description = "Test whether a single controller works")]

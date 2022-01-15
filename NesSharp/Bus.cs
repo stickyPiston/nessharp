@@ -82,6 +82,33 @@ namespace NesSharp {
             }
         }
 
+        public void RunPreVblank() {
+            for(int i = 0; i < 241 * 341 + 2; i++)
+            {
+                this.Tick();
+            }
+        }
+
+        public void RunPostVblank() {
+            int frames = ppu.FrameCycleCount();
+            for(int i = 0; i < frames - 241 * 341 - 2; i++)
+            {
+                this.Tick();
+            }
+        }
+
+        public string DumpCycle() {
+            return $"{cpu.DumpCycle()} SL {ppu.scanline} CYC {ppu.pixel}";
+        }
+
+        public void Reset() {
+            cpu.Reset();
+            ppu.Reset();
+            OAMDMACycles = 0;
+            OAMDATA = 0;
+            clock = 0;
+        }
+
         public void BeginOAM(ushort DMACopyAddr) {
             OAMDMACycles = clock < 3 ? 514 : 513;
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
@@ -93,19 +120,20 @@ namespace NesSharp {
             {
                 if (OAMDMACycles == 0) {
                     cpu.Cycle();
-                } else if (OAMDMACycles <= 512) {
-                    int cycle = 512 - OAMDMACycles;
-                    switch (cycle & 1) {
-                        case 0:
-                            OAMDATA = Read((ushort) (DMACopyAddr | (cycle >> 1)));
-                            break;
-                        case 1:
-                            ppu.Write(0x2004, OAMDATA);
-                            break;
+                } else {
+                    if (OAMDMACycles <= 512) {
+                        int cycle = 512 - OAMDMACycles;
+                        switch (cycle & 1) {
+                            case 0:
+                                OAMDATA = Read((ushort) (DMACopyAddr | (cycle >> 1)));
+                                break;
+                            case 1:
+                                ppu.Write(0x2004, OAMDATA);
+                                break;
+                        }
                     }
+                    OAMDMACycles--;
                 }
-                // Console.WriteLine(cpu.DumpCycle());
-            if (OAMDMACycles > 0) OAMDMACycles--;
             }
 
             // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
