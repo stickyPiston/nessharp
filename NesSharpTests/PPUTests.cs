@@ -24,14 +24,12 @@ namespace NesSharpTests
             cpu = new CPU(bus);
             bus.Register(cpu);
 
-            bus.Register(cpu);
-           
             // Create PPU
             PPU ppu = new PPU(null, bus);
             bus.Register(ppu);
 
             ram = new RAM(0x10000);
-            bus.Register(ram, new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)});
+            bus.Register(ram, new []{ new Range(0, 0x800), new Range(0x6000, 0x7fff) });
             bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0x800, 0x1fff)});
         }
 
