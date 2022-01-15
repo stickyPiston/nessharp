@@ -8,15 +8,19 @@ namespace NesSharp.Mappers
         private bool[] D;
         private byte[] R;
         private int bank;
+        
+        private MMC3 mapper;
+
 
         private Nametables nametables;
 
-        public MMC3PRG(byte[] RomData, byte[] R, bool[] D, Nametables nametables)
+        public MMC3PRG(MMC3 mapper, byte[] RomData, byte[] R, bool[] D, Nametables nametables)
         {
             this.ROM = RomData;
             this.R = R;
             this.D = D;
             this.nametables = nametables;
+            this.mapper = mapper;
         }
         
         public (byte, byte) Read(ushort addr)
@@ -64,15 +68,24 @@ namespace NesSharp.Mappers
                     }
                     break;
                 case 2:
-                    // TODO: IRQ
-                    if ((addr & 1) == 0) {
-                    } else {
+                    if ((addr & 1) == 0)
+                    {
+                        mapper.IRQLatch = data;
+                    } 
+                    else
+                    {
+                        mapper.ResetCounterNext = true;
                     }
                     break;
                 case 3:
-                    // TODO: IRQ
-                    if ((addr & 1) == 0) {
-                    } else {
+                    if ((addr & 1) == 0)
+                    {
+                        mapper.IRQEnable = false;
+                        mapper.IRQ = false;
+                    }
+                    else
+                    {
+                        mapper.IRQEnable = true;
                     }
                     break;
                 default:
@@ -86,16 +99,47 @@ namespace NesSharp.Mappers
         private byte[] ROM;
         private bool[] D;
         private byte[] R;
+        private MMC3 mapper;
+        
+        
 
-        public MMC3CHR(byte[] RomData, byte[] R, bool[] D)
+        private bool prevA12Set = false;
+
+        public MMC3CHR(MMC3 mapper, byte[] RomData, byte[] R, bool[] D)
         {
             this.ROM = RomData;
             this.R = R;
-            this.D = D;       
+            this.D = D;
+            this.mapper = mapper;
+
         }
 
         public (byte, byte) Read(ushort addr)
         {
+            bool newA12Set = (addr & 0x1000) != 0;
+
+            if (newA12Set && !prevA12Set)
+            {
+                bool isZero = mapper.IRQCounter == 0;
+                if (isZero && mapper.IRQEnable)
+                {
+                    mapper.IRQ = true;
+                }
+                
+                if (isZero || mapper.ResetCounterNext)
+                {
+                    mapper.IRQCounter = mapper.IRQLatch;
+                    mapper.ResetCounterNext = false;
+                }
+                else
+                {
+                    mapper.IRQCounter--;
+                }
+            }
+            
+            prevA12Set = newA12Set;
+
+            
             int offset;
 
             switch ((addr & 0x1C00) >> 10) {
@@ -136,16 +180,73 @@ namespace NesSharp.Mappers
         }
     }
 
+    class MMC3CHRRAM : IAddressable
+    {
+        private byte[] RAM = new byte[0x2000];
+        private MMC3 mapper;
+        
+        
+
+        private bool prevA12Set = false;
+
+        public MMC3CHRRAM(MMC3 mapper)
+        {
+            this.mapper = mapper;
+
+        }
+
+        public (byte, byte) Read(ushort addr)
+        {
+            bool newA12Set = (addr & 0x1000) != 0;
+            
+            if (newA12Set && !prevA12Set)
+            {
+                bool isZero = mapper.IRQCounter == 0;
+                if (isZero && mapper.IRQEnable)
+                {
+                    mapper.IRQ = true;
+                }
+                
+                if (isZero || mapper.ResetCounterNext)
+                {
+                    mapper.IRQCounter = mapper.IRQLatch;
+                    mapper.ResetCounterNext = false;
+                }
+                else
+                {
+                    mapper.IRQCounter--;
+                }
+            }
+
+            prevA12Set = newA12Set;
+
+            return (RAM[addr], 0xff);
+        }
+
+        public void Write(ushort addr, byte data)
+        {
+            RAM[addr] = data;
+        }
+    }
+    
     public class MMC3 : BaseMapper
     {
+        internal int IRQLatch;
+        internal int IRQCounter;
+        internal bool ResetCounterNext;
+        internal bool IRQEnable = false;
+        
         public MMC3(byte[] PRGData, byte[] CHRData, MirrorType mirror)
         {
             Nametables = new Nametables(mirror);
             bool[] D = new bool[2];
             byte[] R = new byte[8];
 
-            PRG = new MMC3PRG(PRGData, R, D, Nametables);
-            CHR = new MMC3CHR(CHRData, R, D);
+            PRG = new MMC3PRG(this, PRGData, R, D, Nametables);
+            if (CHRData.Length == 0)
+                CHR = new MMC3CHRRAM(this);
+            else
+                CHR = new MMC3CHR(this, CHRData, R, D);
             PRGRAM = new SaveRAM();
         }
     }

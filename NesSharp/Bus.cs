@@ -151,10 +151,11 @@ namespace NesSharp {
 
         public void Register(BaseMapper mapper)
         {
+            this.mapper = mapper;
             ppu.bus.Nametables = mapper.Nametables;
             ppu.bus.Patterntables = mapper.CHR;
             Register(mapper.PRG, new[] { new Range(0x8000, 0xffff) });
-
+            
             if (mapper.PRGRAM != null) {
                 Register(mapper.PRGRAM, new Range[] {new Range(0x6000, 0x7FFF)});
             }

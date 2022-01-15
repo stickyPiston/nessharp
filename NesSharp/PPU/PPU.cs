@@ -256,6 +256,10 @@ namespace NesSharp.PPU
                         ShiftRegs();
                         DoBackgroundFetches();
                     }
+                    else if (pixel >= 337 && pixel <= 340)
+                    {
+                        DoBackgroundFetches();
+                    }
                     //throw new System.NotImplementedException();
                 }
                 else if (scanline == 261)
@@ -281,6 +285,10 @@ namespace NesSharp.PPU
                     else if (pixel >= 321 && pixel <= 336)
                     {
                         ShiftRegs();
+                        DoBackgroundFetches();
+                    }
+                    else if (pixel >= 337 && pixel <= 340)
+                    {
                         DoBackgroundFetches();
                     }
                 }
