@@ -35,8 +35,8 @@ namespace NesSharp.PPU
         private byte PaletteShift2;
 
         private bool ODDFRAME;
-        private uint pixel;
-        private uint scanline;
+        public uint pixel;
+        public uint scanline;
 
         private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
         private SpriteAttribute[] spriteAttributeLatches = new SpriteAttribute[8];
@@ -53,8 +53,8 @@ namespace NesSharp.PPU
             mask = new PPUMASK();
             status = new PPUSTATUS
             {
-                VblankStarted = true,
-                SpriteOverflow = true
+                // VblankStarted = true,
+                // SpriteOverflow = true
             };
             ODDFRAME = false;
 
@@ -410,7 +410,7 @@ namespace NesSharp.PPU
                             break;
                         case 0:
                             isRenderingSpriteZero = secondaryOamHasSpriteZero;
-                            SpriteIndex++;
+                            SpriteIndex = (SpriteIndex + 1) % 8;
                             break;
                     }
                 }

@@ -28,39 +28,17 @@ namespace NesSharpTests
            
             // Create PPU
             PPU ppu = new PPU(null, bus);
-            ppubus = ppu.bus;
-            ppubus.Palettes = new PPUPalettes();
-            // ppubus.Nametables = new Repeater(new RandomRam(), 0, 0x800);
-            ppubus.Nametables = new RandomRam();
-            ppubus.Patterntables = new RandomRam();
-
             bus.Register(ppu);
-            bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
-            bus.Register(ppu, new []{new Range(0x4014, 0x4014)});
+
             ram = new RAM(0x10000);
             bus.Register(ram, new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)});
             bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0x800, 0x1fff)});
-            
-            
         }
 
         public void ReadNES(string file)
         {
             Cartridge cart = RomParser.Parse("../../../roms/" + file);
-            Console.WriteLine(cart.rombytes.Length);
-
-            for (int i = 0; i < cart.rombytes.Length; i++)
-            {
-                bus.Write((ushort)(0x8000 + i), cart.rombytes[i]);
-                if (cart.rombytes.Length == 0x4000)
-                {
-                    bus.Write((ushort)(0xc000 + i), cart.rombytes[i]);
-                }
-            }
-            for (int i = 0; i < cart.vrombytes.Length; i++)
-            {
-                ppubus.Write((ushort)i, cart.vrombytes[i]);      
-            }
+            bus.Register(cart.mapper);
         }
 
         public void ReadOutput()

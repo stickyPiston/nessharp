@@ -36,7 +36,6 @@ namespace NesSharp
 
             string[] split = lines[current].Split('|');
             string controls = split[2 + controller];
-            Console.WriteLine(controls + controller + "; " + current);
 
             if (controls.Length != 8) return 0;
 
@@ -44,7 +43,6 @@ namespace NesSharp
 
             for (int i = 0; i < 8; i++) {
                 if (controls[i] != '.') {
-                    if (i == 7) Console.WriteLine("a");
                     b |= (byte) (1 << i);
                 }
             }

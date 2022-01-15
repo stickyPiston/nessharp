@@ -110,6 +110,8 @@ namespace NesSharp {
             }
         }
 
+        int fps = 60;
+
         public void Run() {
             Clock c = new Clock();
             long frame = 0;
@@ -126,14 +128,14 @@ namespace NesSharp {
                 long time = c.ElapsedTime.AsMilliseconds();
                 frame++;
 
-                if (frame % 60 == 0) {
-                    Console.WriteLine("60 frames in " + (time - last) + " milliseconds");
+                if (frame % fps == 0) {
+                    Console.WriteLine(fps + " frames in " + (time - last) + " milliseconds");
                     last = time;
                 }
 
                 // Comment the following 5 lines out to remove frame limiter
-                long f = time * 60 / 1000 + 1;
-                while (time < 1000.0 / 60 * f) {
+                long f = time * fps / 1000 + 1;
+                while (time < 1000.0 / fps * f) {
                     Thread.Sleep(1);
                     time = c.ElapsedTime.AsMilliseconds();
                 }
@@ -147,7 +149,7 @@ namespace NesSharp {
         private Texture im;
         private RenderWindow rw;
         private Sprite s;
-        private Bus bus;
+        public Bus bus;
         private ControllerPort controllerPort;
         private IMovie movie;
         private string file;
@@ -182,6 +184,7 @@ namespace NesSharp {
             movie = new FM2(File.ReadAllLines(path));
             controllerPort.register(new PlayerController(0, movie), 0);
             controllerPort.register(new PlayerController(1, movie), 1);
+            SetupCartridge(file);
         }
 
         public void RunFrame() {
@@ -189,19 +192,24 @@ namespace NesSharp {
                 Reset reset = movie.GetReset();
                 switch (reset) {
                     case Reset.SOFT:
-                        bus.Reset();
+                        /* bus.Reset(); */
+                        SetupCartridge(file);
+                        movie.Advance();
                         break;
                     case Reset.POWER:
                         SetupCartridge(file);
+                        movie.Advance();
                         break;
                 }
             }
 
-            bus.RunFrame();
+            bus.RunPreVblank();
 
             if (movie != null) {
                 movie.Advance();
             }
+
+            bus.RunPostVblank();
         }
 
         public void Close() {
@@ -231,6 +239,7 @@ namespace NesSharp {
             // Load config
             // TODO maybe other place
             ConfigurationManager.LoadConfiguration();
+            InputManager.keysPressed.Clear();
             this.file = file;
             
             // Create Bus, CPU, and ControllerPort
@@ -248,36 +257,18 @@ namespace NesSharp {
             bus.Register(cpu);
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            
+            Cartridge cart = RomParser.Parse(file);
             
             // Create PPU
             PPU.PPU ppu = new PPU.PPU(im, bus);
-            PPUMemoryBus ppubus = ppu.bus;
-            ppubus.Palettes = new PPUPalettes();
-            ppubus.Nametables = new Repeater(new RandomRam(), 0, 0x800);
-            ppubus.Patterntables = new RandomRam();
-
             bus.Register(ppu);
-            bus.Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
-            bus.Register(ppu, new []{new Range(0x4014, 0x4014)});
-            RAM ram = new RAM(0x10000);
-            bus.Register(ram, new []{ new Range(0x8000, 0xffff), new Range(0, 0x800), new Range(0x6000, 0x7fff), new Range(0x4000, 0x7fff)});
-            bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0x800, 0x1fff)});
-            
-            Cartridge cart = RomParser.Parse(file);
-            Console.WriteLine(cart.rombytes.Length);
 
-            for (int i = 0; i < cart.rombytes.Length; i++)
-            {
-                bus.Write((ushort)(0x8000 + i), cart.rombytes[i]);
-                if (cart.rombytes.Length == 0x4000)
-                {
-                    bus.Write((ushort)(0xc000 + i), cart.rombytes[i]);
-                }
-            }
-            for (int i = 0; i < cart.vrombytes.Length; i++)
-            {
-                ppubus.Write((ushort)i, cart.vrombytes[i]);      
-            }
+            // Create RAM
+            RAM ram = new RAM(0x10000);
+            bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0, 0x1fff)});
+
+            // Create Mapper
+            bus.Register(cart.mapper);
         }
 
         public static void Main() { }
