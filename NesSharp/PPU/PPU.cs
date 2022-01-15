@@ -7,7 +7,7 @@ namespace NesSharp.PPU
 {
     public class PPU : IClockable, IAddressable
     {
-        private Bus MainBus;
+        internal Bus MainBus;
 
         private Image currentFrame;
         private Texture frameBuffer;
@@ -56,9 +56,9 @@ namespace NesSharp.PPU
                 // VblankStarted = true,
                 // SpriteOverflow = true
             };
-            ODDFRAME = false;
+            ODDFRAME = true;
 
-            bus = new PPUMemoryBus();
+            bus = new PPUMemoryBus(this);
 
             this.currentFrame = new Image(256, 240);
             this.frameBuffer = frameBuffer;
@@ -214,6 +214,10 @@ namespace NesSharp.PPU
                         }
                     }
                 }
+                else
+                {
+                    currentFrame.SetPixel(pixel - 1, scanline, Palette.BasicColors[bus.Palettes.background]);
+                }
 
                 if (mask.ShowSprites)
                 {
@@ -250,6 +254,8 @@ namespace NesSharp.PPU
                     {
                         // v = (ushort) ((v & ~0x081f) | (t & 0x081f));
                         v = (ushort) ((v & ~0x041f) | (t & 0x041f));
+                        MainBus.mapper.NotifyVramAddrChange(v);
+
                     }
                     else if (pixel >= 321 && pixel <= 336)
                     {
@@ -276,11 +282,13 @@ namespace NesSharp.PPU
                     {
                         //hori(v) = hori(t)
                         v = (ushort) ((v & ~0x041f) | (t & 0x041f));
+                        MainBus.mapper.NotifyVramAddrChange(v);
                     }
                     else if (pixel >= 280 && pixel <= 304)
                     {
                         //vert(v) = vert(t)
                         v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
+                        MainBus.mapper.NotifyVramAddrChange(v);
                     }
                     else if (pixel >= 321 && pixel <= 336)
                     {
@@ -405,7 +413,7 @@ namespace NesSharp.PPU
                                 spritePatternAddress = (ushort) ((secondaryOam.Sprites[SpriteIndex].index & 1) << 12);
                                 spritePatternAddress |=
                                     (ushort) ((secondaryOam.Sprites[SpriteIndex].index & 0xfe) << 4);
-                                if (scanline - secondaryOam.Sprites[SpriteIndex].Y >= 8)
+                                if ((scanline - secondaryOam.Sprites[SpriteIndex].Y >= 8) ^ spriteAttributeLatches[SpriteIndex].VerticalFlip == SpriteFlip.Flipped)
                                 {
                                     spritePatternAddress |= 1 << 4;
                                 }
@@ -579,6 +587,7 @@ namespace NesSharp.PPU
             {
                 v += 1;
             }
+            //MainBus.mapper.NotifyVramAddrChange(v);
         }
 
         void YIncrement()
@@ -607,6 +616,7 @@ namespace NesSharp.PPU
 
                 v = (ushort) ((v & 0xfc1f) | (y << 5));
             }
+            //MainBus.mapper.NotifyVramAddrChange(v);
         }
 
         byte getTile()
@@ -643,6 +653,7 @@ namespace NesSharp.PPU
                 {
                     byte val = bus.BufferedRead(v);
                     v += control.VramAddrInc;
+                    MainBus.mapper.NotifyVramAddrChange(v);
                     return (val, 0xFF);
                 }
                 default:
@@ -708,13 +719,16 @@ namespace NesSharp.PPU
                     {
                         t = (ushort) ((t & 0xff00) | data);
                         v = t;
+                        MainBus.mapper.NotifyVramAddrChange(v);
                     }
-
+    
                     w = !w;
                     break;
                 case 0x2007:
                     bus.Write(v, data);
                     v += control.VramAddrInc;
+                    MainBus.mapper.NotifyVramAddrChange(v);
+
                     break;
                 case 0x4014:
                     MainBus.BeginOAM((ushort) (data << 8));

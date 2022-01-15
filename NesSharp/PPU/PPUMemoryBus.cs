@@ -1,15 +1,25 @@
-﻿namespace NesSharp.PPU
+﻿using NesSharp.Mappers;
+
+namespace NesSharp.PPU
 {
     public class PPUMemoryBus
     {
         public IAddressable Patterntables;
         public IAddressable Nametables;
         public PPUPalettes Palettes;
+        private PPU ppu;
 
         private byte buffer = 0;
 
+        public PPUMemoryBus(PPU ppu)
+        {
+            this.ppu = ppu;
+        }
+
         public byte Read(ushort addr)
         {
+            ppu.MainBus.mapper.NotifyVramAddrChange(addr);
+            addr = (ushort)(addr % 0x4000);
             if (addr < 0x2000)
             {
                 return Patterntables.Read(addr).Item1;
@@ -27,6 +37,8 @@
 
         public byte BufferedRead(ushort addr)
         {
+            ppu.MainBus.mapper.NotifyVramAddrChange(addr);
+
             if (addr < 0x2000)
             {
                 byte b = buffer;
@@ -49,6 +61,9 @@
 
         public void Write(ushort addr, byte data)
         {
+            ppu.MainBus.mapper.NotifyVramAddrChange(addr);
+
+
             addr = (ushort) (addr % 0x4000);
             if (addr < 0x2000)
             {

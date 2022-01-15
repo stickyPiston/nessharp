@@ -134,11 +134,11 @@ namespace NesSharp {
                 }
 
                 // Comment the following 5 lines out to remove frame limiter
-                long f = time * fps / 1000 + 1;
-                while (time < 1000.0 / fps * f) {
-                    Thread.Sleep(1);
-                    time = c.ElapsedTime.AsMilliseconds();
-                }
+                // long f = time * fps / 1000 + 1;
+                // while (time < 1000.0 / fps * f) {
+                //     Thread.Sleep(1);
+                //     time = c.ElapsedTime.AsMilliseconds();
+                // }
             }
         }
 
@@ -221,7 +221,7 @@ namespace NesSharp {
         public void SetupScreen(IntPtr handle) {
             // Create window
             if (handle == IntPtr.Zero) {
-                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
+                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default | Styles.Resize);
                 rw.Size = new Vector2u(256 * 2, 240 * 2);
                 rw.Closed += Closed;
             } else {

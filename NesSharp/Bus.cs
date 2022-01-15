@@ -58,11 +58,11 @@ namespace NesSharp {
     public class Bus {
         private CPU cpu;
         private PPU.PPU ppu;
-        private BaseMapper mapper;
+        internal BaseMapper mapper;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        private byte clock = 0;
+        private byte clock = 5;
         private byte open = 0;
 
         private int OAMDMACycles = 0;

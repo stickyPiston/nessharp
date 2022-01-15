@@ -10,6 +10,11 @@ namespace NesSharp.Mappers
         public IAddressable PRGRAM;
         public Nametables Nametables;
         public bool IRQ;
+
+        public virtual void NotifyVramAddrChange(ushort v)
+        {
+            
+        }
     }
 
     public class SaveRAM : IAddressable {
