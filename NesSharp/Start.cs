@@ -185,6 +185,7 @@ namespace NesSharp {
             controllerPort.register(new PlayerController(0, movie), 0);
             controllerPort.register(new PlayerController(1, movie), 1);
             File.Delete(file + ".save");
+            movie.Advance();
             SetupCartridge(file);
         }
 
@@ -195,11 +196,9 @@ namespace NesSharp {
                     case Reset.SOFT:
                         /* bus.Reset(); */
                         SetupCartridge(file);
-                        movie.Advance();
                         break;
                     case Reset.POWER:
                         SetupCartridge(file);
-                        movie.Advance();
                         break;
                 }
             }

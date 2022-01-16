@@ -635,7 +635,10 @@ namespace NesSharp.PPU
             {
                 case 0x2002:
                 {
-                    if (scanline == 241 && pixel == 0) preventVbl = true;
+                    if (scanline == 241 && pixel == 0) {
+                        preventVbl = true;
+                        Console.WriteLine("VBL skip!");
+                    }
 
                     byte val = status.ToByte();
 

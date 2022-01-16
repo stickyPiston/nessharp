@@ -24,6 +24,7 @@ namespace NesSharp
 
         public void Advance() {
             current++;
+            while (current < lines.Length && !lines[current].StartsWith('|')) current++;
         }
 
         public Reset GetReset() {

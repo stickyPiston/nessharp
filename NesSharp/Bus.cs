@@ -62,7 +62,7 @@ namespace NesSharp {
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        private byte clock = 0;
+        private byte clock = 2;
         private byte open = 0;
 
         private int OAMDMACycles = 0;
@@ -87,7 +87,7 @@ namespace NesSharp {
             {
                 this.Tick();
             }
-            while (ppu.scanline != 241);
+            while (ppu.scanline != 241 || ppu.pixel != 12);
         }
 
         public string DumpCycle() {
