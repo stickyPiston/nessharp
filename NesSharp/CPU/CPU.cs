@@ -162,7 +162,7 @@ namespace NesSharp
             this.instr = instr;
         }
 
-        private void CycleEnd() {
+        public void CycleEnd() {
             prevprevpolled = prevpolled;
             prevpolled = polled;
 
@@ -215,7 +215,6 @@ namespace NesSharp
                     SetInstruction(instructions[val]);
                     
                     // Continue to next cycle
-                    CycleEnd();
                     cycle += 1;
 
                     // Return so we don't execute another cycle
@@ -227,7 +226,6 @@ namespace NesSharp
             instr.Cycles[cycle](this);
 
             // Continue to next cycle
-            CycleEnd();
             cycle += 1;
         }
 
