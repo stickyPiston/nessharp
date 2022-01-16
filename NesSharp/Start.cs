@@ -57,10 +57,14 @@ namespace NesSharp {
             // Content = panel = new Panel();
 
             this.Menu = new MenuBar();
-            ButtonMenuItem item = new ButtonMenuItem { Text = "File" };
-            item.Items.Add(new ButtonMenuItem(Open) { Text = "Open ROM..." });
-            item.Items.Add(new ButtonMenuItem(OpenMovie) { Text = "Open Movie..." });
+            ButtonMenuItem item = new ButtonMenuItem { Text = "ROM" };
+            item.Items.Add(new ButtonMenuItem(Open) { Text = "Open..." });
             item.Items.Add(new ButtonMenuItem(Close) { Text = "Close" });
+            this.Menu.Items.Add(item);
+
+            item = new ButtonMenuItem { Text = "Movie" };
+            item.Items.Add(new ButtonMenuItem(OpenMovie) { Text = "Play..." });
+            item.Items.Add(new ButtonMenuItem(StopMovie) { Text = "Stop" });
             this.Menu.Items.Add(item);
             
             Closed += Close;
@@ -68,6 +72,12 @@ namespace NesSharp {
 
         public static void Start(string platform) {
             new Application(platform).Run(new MainForm());
+        }
+
+        public void StopMovie(object o, EventArgs e) {
+            Monitor.Enter(m_lock);
+                emulator.StopMovie();
+            Monitor.Exit(m_lock);
         }
 
         public void OpenMovie(object o, EventArgs e) {
@@ -133,12 +143,10 @@ namespace NesSharp {
                     last = time;
                 }
 
-                // Comment the following 5 lines out to remove frame limiter
-                // long f = time * fps / 1000 + 1;
-                // while (time < 1000.0 / fps * f) {
-                //     Thread.Sleep(1);
-                //     time = c.ElapsedTime.AsMilliseconds();
-                // }
+                // Comment the following 3 lines out to remove frame limiter
+                while (time < 1000.0 / fps * frame) {
+                    time = c.ElapsedTime.AsMilliseconds();
+                }
             }
         }
 
@@ -189,6 +197,12 @@ namespace NesSharp {
             SetupCartridge(file);
         }
 
+        public void StopMovie() {
+            movie = null;
+            controllerPort.register(new Controller(1), 0);
+            controllerPort.register(new Controller(2), 1);
+        }
+
         public void RunFrame() {
             if (movie != null) {
                 Reset reset = movie.GetReset();
@@ -207,6 +221,7 @@ namespace NesSharp {
 
             if (movie != null) {
                 movie.Advance();
+                if (movie.Ended()) StopMovie();
             }
 
             bus.RunFrame();

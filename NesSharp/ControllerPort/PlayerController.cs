@@ -10,6 +10,7 @@ namespace NesSharp
         byte GetInput(uint controller);
         Reset GetReset();
         void Advance();
+        bool Ended();
     }
 
     public class FM2 : IMovie {
@@ -25,6 +26,10 @@ namespace NesSharp
         public void Advance() {
             current++;
             while (current < lines.Length && !lines[current].StartsWith('|')) current++;
+        }
+
+        public bool Ended() {
+            return current >= lines.Length;
         }
 
         public Reset GetReset() {
