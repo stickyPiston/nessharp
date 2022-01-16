@@ -211,8 +211,6 @@ namespace NesSharp {
             }
 
             bus.RunFrame();
-
-            Console.WriteLine(bus.DumpCycle());
         }
 
         public void Close() {
