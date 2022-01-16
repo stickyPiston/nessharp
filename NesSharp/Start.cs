@@ -184,6 +184,7 @@ namespace NesSharp {
             movie = new FM2(File.ReadAllLines(path));
             controllerPort.register(new PlayerController(0, movie), 0);
             controllerPort.register(new PlayerController(1, movie), 1);
+            File.Delete(file + ".save");
             SetupCartridge(file);
         }
 
