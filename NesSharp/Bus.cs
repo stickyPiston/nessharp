@@ -83,10 +83,11 @@ namespace NesSharp {
         }
 
         public void RunPreVblank() {
-            for(int i = 0; i < 241 * 341 + 2; i++)
+            do
             {
                 this.Tick();
             }
+            while (ppu.scanline != 241);
         }
 
         public string DumpCycle() {
