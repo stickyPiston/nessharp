@@ -210,7 +210,9 @@ namespace NesSharp {
                 movie.Advance();
             }
 
-            bus.RunPostVblank();
+            bus.RunFrame();
+
+            Console.WriteLine(bus.DumpCycle());
         }
 
         public void Close() {
@@ -222,7 +224,7 @@ namespace NesSharp {
         public void SetupScreen(IntPtr handle) {
             // Create window
             if (handle == IntPtr.Zero) {
-                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default | Styles.Resize);
+                rw = new RenderWindow(new VideoMode(256, 240), "NES#", Styles.Default ^ Styles.Resize);
                 rw.Size = new Vector2u(256 * 2, 240 * 2);
                 rw.Closed += Closed;
             } else {

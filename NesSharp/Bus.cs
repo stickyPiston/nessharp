@@ -62,7 +62,7 @@ namespace NesSharp {
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        private byte clock = 5;
+        private byte clock = 0;
         private byte open = 0;
 
         private int OAMDMACycles = 0;
@@ -75,23 +75,15 @@ namespace NesSharp {
 
         //public Run(string romFilepath) { when the emulator accepts roms
         public void RunFrame() {
-            int frames = ppu.FrameCycleCount();
-            for(int i = 0; i < frames; i++)
+            do
             {
                 this.Tick();
             }
+            while (ppu.scanline != 0 || ppu.pixel != 0);
         }
 
         public void RunPreVblank() {
             for(int i = 0; i < 241 * 341 + 2; i++)
-            {
-                this.Tick();
-            }
-        }
-
-        public void RunPostVblank() {
-            int frames = ppu.FrameCycleCount();
-            for(int i = 0; i < frames - 241 * 341 - 2; i++)
             {
                 this.Tick();
             }

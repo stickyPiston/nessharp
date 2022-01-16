@@ -75,19 +75,6 @@ namespace NesSharp.PPU
 
         private byte tempSpriteByte;
 
-
-        public int FrameCycleCount()
-        {
-            if ((mask.ShowBackground || mask.ShowSprites) && ODDFRAME)
-            {
-                return 262 * 341 - 1;
-            }
-            else
-            {
-                return 262 * 341;
-            }
-        }
-
         private byte secOamAddr = 0;
         private bool secOamFull;
         private bool oamAddrOverflow;
