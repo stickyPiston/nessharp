@@ -1,6 +1,8 @@
 ﻿using System.Threading;
 using System.Collections.Generic;
 using System;
+using System.IO;
+using System.Text;
 
 using NesSharp.Mappers;
 
@@ -57,7 +59,7 @@ namespace NesSharp {
 
     public class Bus {
         private CPU cpu;
-        private PPU.PPU ppu;
+        internal PPU.PPU ppu;
         internal BaseMapper mapper;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
@@ -65,12 +67,36 @@ namespace NesSharp {
         private byte clock = 2;
         private byte open = 0;
 
-        private int OAMDMACycles = 0;
+        private ushort OAMDMACycles = 0;
         private byte OAMDATA = 0;
         private ushort DMACopyAddr;
 
         public bool IsIRQHigh() {
             return mapper != null && mapper.IRQ;
+        }
+
+        public void SaveState(BinaryWriter writer) {
+            writer.Write(clock);
+            writer.Write(open);
+            writer.Write(OAMDMACycles);
+            writer.Write(OAMDATA);
+            writer.Write(DMACopyAddr);
+
+            cpu.SaveState(writer);
+            ppu.SaveState(writer);
+            mapper.SaveState(writer);
+        }
+
+        public void LoadState(BinaryReader reader) {
+            clock = reader.ReadByte();
+            open = reader.ReadByte();
+            OAMDMACycles = reader.ReadUInt16();
+            OAMDATA = reader.ReadByte();
+            DMACopyAddr = reader.ReadUInt16();
+
+            cpu.LoadState(reader);
+            ppu.LoadState(reader);
+            mapper.LoadState(reader);
         }
 
         //public Run(string romFilepath) { when the emulator accepts roms
@@ -103,7 +129,7 @@ namespace NesSharp {
         }
 
         public void BeginOAM(ushort DMACopyAddr) {
-            OAMDMACycles = clock < 3 ? 514 : 513;
+            OAMDMACycles = (ushort) (clock < 3 ? 514 : 513);
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
 

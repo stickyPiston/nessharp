@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace NesSharp.Mappers
 {
@@ -96,11 +97,11 @@ namespace NesSharp.Mappers
 
     class MMC3CHR : IAddressable
     {
-        private byte[] ROM;
+        internal byte[] ROM;
         private bool[] D;
         private byte[] R;
         private MMC3 mapper;
-        
+        internal bool RAM;
 
         public MMC3CHR(MMC3 mapper, byte[] RomData, byte[] R, bool[] D)
         {
@@ -108,7 +109,8 @@ namespace NesSharp.Mappers
             this.R = R;
             this.D = D;
             this.mapper = mapper;
-
+            this.RAM = RomData.Length == 0;
+            if (this.RAM) ROM = new byte[0x2000];
         }
 
         public (byte, byte) Read(ushort addr)
@@ -149,54 +151,118 @@ namespace NesSharp.Mappers
 
         public void Write(ushort addr, byte data)
         {
-            
-        }
-    }
+            if (!RAM) return;
 
-    class MMC3CHRRAM : IAddressable
-    {
-        private byte[] RAM = new byte[0x2000];
-        private MMC3 mapper;
+            int offset;
 
-        public MMC3CHRRAM(MMC3 mapper)
-        {
-            this.mapper = mapper;
+            switch ((addr & 0x1C00) >> 10) {
+                case 0:
+                    offset = (D[1] ? R[2] : (R[0] & 0xFE)) * 1024;
+                    break;
+                case 1:
+                    offset = (D[1] ? R[3] : (R[0] | 0x01)) * 1024;
+                    break;
+                case 2:
+                    offset = (D[1] ? R[4] : (R[1] & 0xFE)) * 1024;
+                    break;
+                case 3:
+                    offset = (D[1] ? R[5] : (R[1] | 0x01)) * 1024;
+                    break;
+                case 4:
+                    offset = (!D[1] ? R[2] : (R[0] & 0xFE)) * 1024;
+                    break;
+                case 5:
+                    offset = (!D[1] ? R[3] : (R[0] | 0x01)) * 1024;
+                    break;
+                case 6:
+                    offset = (!D[1] ? R[4] : (R[1] & 0xFE)) * 1024;
+                    break;
+                case 7:
+                    offset = (!D[1] ? R[5] : (R[1] | 0x01)) * 1024;
+                    break;
+                default:
+                    throw new Exception();
+            }
 
-        }
-
-        public (byte, byte) Read(ushort addr)
-        {
-            return (RAM[addr], 0xff);
-        }
-
-        public void Write(ushort addr, byte data)
-        {
-            
-            
-            RAM[addr] = data;
+            ROM[((addr & 0x3FF) + offset) & (ROM.Length - 1)] = data;
         }
     }
     
     public class MMC3 : BaseMapper
     {
-        internal int IRQLatch;
-        internal int IRQCounter;
+        internal byte IRQLatch;
+        internal byte IRQCounter;
         internal bool ResetCounterNext;
         internal bool IRQEnable = false;
+        private bool[] D;
+        private byte[] R;
         
         private bool prevA12Set = false;
         public MMC3(byte[] PRGData, byte[] CHRData, MirrorType mirror)
         {
             Nametables = new Nametables(mirror);
-            bool[] D = new bool[2];
-            byte[] R = new byte[8];
+            D = new bool[2];
+            R = new byte[8];
 
             PRG = new MMC3PRG(this, PRGData, R, D, Nametables);
-            if (CHRData.Length == 0)
-                CHR = new MMC3CHRRAM(this);
-            else
-                CHR = new MMC3CHR(this, CHRData, R, D);
+            CHR = new MMC3CHR(this, CHRData, R, D);
             PRGRAM = new SaveRAM();
+        }
+
+        public override void SaveState(BinaryWriter writer){
+            base.SaveState(writer);
+
+            writer.Write(IRQLatch);
+            writer.Write(IRQCounter);
+            writer.Write(ResetCounterNext);
+            writer.Write(IRQEnable);
+            writer.Write(IRQ);
+            writer.Write(prevA12Set);
+
+            writer.Write(D[0]);
+            writer.Write(D[1]);
+            writer.Write(R[0]);
+            writer.Write(R[1]);
+            writer.Write(R[2]);
+            writer.Write(R[3]);
+            writer.Write(R[4]);
+            writer.Write(R[5]);
+            writer.Write(R[6]);
+            writer.Write(R[7]);
+
+            if (((MMC3CHR) CHR).RAM) {
+                foreach (byte b in ((MMC3CHR) CHR).ROM) writer.Write(b);
+            }
+
+            foreach (byte b in ((SaveRAM) PRGRAM).RAM) writer.Write(b);
+        }
+
+        public override void LoadState(BinaryReader reader) {
+            base.LoadState(reader);
+
+            IRQLatch = reader.ReadByte();
+            IRQCounter = reader.ReadByte();
+            ResetCounterNext = reader.ReadBoolean();
+            IRQEnable = reader.ReadBoolean();
+            IRQ = reader.ReadBoolean();
+            prevA12Set = reader.ReadBoolean();
+
+            D[0] = reader.ReadBoolean();
+            D[1] = reader.ReadBoolean();
+            R[0] = reader.ReadByte();
+            R[1] = reader.ReadByte();
+            R[2] = reader.ReadByte();
+            R[3] = reader.ReadByte();
+            R[4] = reader.ReadByte();
+            R[5] = reader.ReadByte();
+            R[6] = reader.ReadByte();
+            R[7] = reader.ReadByte();
+
+            if (((MMC3CHR) CHR).RAM) {
+                for (int i = 0; i < 8 * 1024; i++) ((MMC3CHR) CHR).ROM[i] = reader.ReadByte();
+            }
+
+            for (int i = 0; i < 8 * 1024; i++) ((SaveRAM) PRGRAM).RAM[i] = reader.ReadByte();
         }
 
         public override void NotifyVramAddrChange(ushort v)
