@@ -97,13 +97,13 @@ namespace NesSharp {
                     var buffer = new SoundBuffer(samples, 1, 44100);//44100
                     var sound = new Sound(buffer);
                     sound.Play();
-                    Console.WriteLine(apu.output() * 10000);
+                    Console.WriteLine((short)(apu.noiseOutput() * 10000));
                     sampleCounter = 0;
                     Array.Clear(samples, 0, 13538);
                 }
                 else
                 {
-                    samples[sampleCounter++] = (short)(apu.output() * 10000);
+                    samples[sampleCounter++] = (short)(apu.noiseOutput() * 10000);
                 }
             }
 

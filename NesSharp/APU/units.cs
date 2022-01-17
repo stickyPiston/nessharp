@@ -21,7 +21,7 @@ namespace NesSharp
             sequence = z;
             new_sequence = z;
         }
-        public int Clock(bool active, Func<uint, uint> funcTimer) {
+        public int Clock(bool active, Func<UInt32, UInt32> funcTimer) {
           if (active) {   
             counter--;
             if (counter == 0xFFFF) {   
@@ -48,7 +48,7 @@ namespace NesSharp
             disable = x;
             volume = z;
         }
-        public ushort ApuClock(bool loop)
+        public void ApuClock(bool loop)
         {
             if (!start)
             {
@@ -79,7 +79,7 @@ namespace NesSharp
                 output = volume;
             else
                 output = decay_counter;
-            return output;
+            //return output;
         }
     }
 
@@ -161,7 +161,7 @@ namespace NesSharp
                 counter = 0;
             else
                 if (counter > 0 && !pause)
-                counter--;
+                    counter--;
             return counter;
         }
     }

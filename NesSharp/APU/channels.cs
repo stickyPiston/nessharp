@@ -19,12 +19,13 @@ namespace NesSharp
         //https://www.nesdev.org/2A03%20technical%20reference.txt
         public Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, 0x0000, 0x0000, false, 1, false);
         public Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, 0x0000, 0x0000, false, 1, false);
-        public Noise noise = new Noise(false, false, 0.0, 0.0, 0x0000, 0xDBDB, 0x0000, false, 1, false);
+        public Noise noise = new Noise(false, false, 0.0, 0.0, 0x0000, 0xDBDB, 0x0000, false, 1);
 
         //public double globalTime = 0.0;
         public X2A03(Bus bus)
         {
             this.bus = bus;
+            noise.n_seq.sequence = 0xDBDB;
         }
         //public (byte, byte) Read(UInt16 addr) {
         public (byte, byte) Read(UInt16 addr) {
@@ -218,11 +219,10 @@ namespace NesSharp
             public double n_output;
             public Sequencer n_seq;
             public Envelope n_env;
-            public Sweeper n_swp;
             public Lengthcounter n_lc;
             
 
-            public Noise(bool x, bool y, double a, double b, uint z, ushort g, ushort h, bool i, sbyte j, bool k)
+            public Noise(bool x, bool y, double a, double b, uint z, ushort g, ushort h, bool i, sbyte j)
             {
                 n_status = x;
                 n_halt = y;
@@ -231,7 +231,6 @@ namespace NesSharp
 
                 n_seq = new Sequencer(z, g);
                 n_env = new Envelope(i, h);
-                n_swp = new Sweeper(i, j, k);
                 n_lc = new Lengthcounter(j);
             }
 
@@ -379,11 +378,11 @@ namespace NesSharp
                     }
                 }
 
-            //pulse1.p_seq.Clock(
-            //    pulse1.p_status,
-            //    (s) => ((s & 0x0001) << 7) | ((s & 0x00FE) >> 1)
-            //);
-            //pulse1.p_sample = pulse1.p_seq.output;
+                //pulse1.p_seq.Clock(
+                //    pulse1.p_status,
+                //    (s) => ((s & 0x0001) << 7) | ((s & 0x00FE) >> 1)
+                //);
+                //pulse1.p_sample = pulse1.p_seq.output;
             pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
             pulse1.p_osc.amplitude = (double)(pulse1.p_env.output - 1) / 16.0;
             pulse1.p_sample = pulse1.p_osc.Sample(globalTime);
@@ -421,26 +420,25 @@ namespace NesSharp
             //);
             //pulse1.p_sample = pulse1.p_seq.output;
 
-            noise.n_seq.Clock(
-                noise.n_status,
-                (s) => (((s & 0x0001) ^ ((s & 0x0002) >> 1)) << 14) | ((s & 0x7FFF) >> 1)
+            noise.n_seq.Clock(noise.n_status,
+                s => (((s & 0x0001) ^ ((s & 0x0002) >> 1)) << 14) | ((s & 0x7FFF) >> 1)
             );
             if (noise.n_lc.counter > 0 && noise.n_seq.counter >= 8)
             {
-                noise.n_output = (double)noise.n_seq.output * ((double)(noise.n_env.output - 1) / 16.0);
+                noise.n_output = noise.n_seq.output * ((noise.n_env.output - 1) / 16.0);
             }
 
                 if (!pulse1.p_status) pulse1.p_output = 0;
                 if (!pulse2.p_status) pulse2.p_output = 0;
                 if (!noise.n_status) noise.n_output = 0;
-        }
+            }
         pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
         pulse2.p_swp.TrackClock(pulse2.p_seq.reload);
 
         clock_counter++;
 }
 
-        public double output()
+        public double noiseOutput()
         {
             //Console.WriteLine($"Pulse 1 output: {(((1.0 * pulse1.p_sample) - 0.8) * 0.5 + ((1.0 * pulse2.p_sample) - 0.8) * 0.5) * Int16.MaxValue}");
             //Console.WriteLine($"Pulse 1 output: {((pulse1.p_sample - 0.5) * 0.5 + (pulse2.p_sample - 0.5) * 0.5) * Int16.MaxValue}");
@@ -453,10 +451,10 @@ namespace NesSharp
             //return (double)((pulse1.p_output - 0.5) * 0.05 + (pulse2.p_output - 0.5) * 0.05);
             //return (short)((pulse1.p_sample / 2) + (pulse2.p_sample /2));
 
-            return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) * 0.05) + (4.0 * (noise.n_output - 0.5)* 0.05)  );
+            return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) * 0.05) + (2.0 * (noise.n_output - 0.5)* 0.05)  );
 
-            //return (double)((((1.0 * pulse1.p_output) - 0.8) * 0.05 ));
-            //return (double)((8.0 * (noise.n_output - 0.5)));
+            //return (double)((((1.0 * pulse1.p_output) - 0.8)*0.5 ));
+            //return (double)((2.0 * (noise.n_output - 0.5))*0.05);
         }
     }
 }
