@@ -299,7 +299,8 @@ namespace NesSharp
                         {
 
                             //Console.WriteLine("HighIRQ sent");
-                            bus.HighIRQ(this);
+                            //TODO Fix IRQ
+                            //bus.HighIRQ(this);
                         }
                         //clock_counter2 += 0.5;
                         quarterFrame = true;
