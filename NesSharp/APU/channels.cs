@@ -32,9 +32,9 @@ namespace NesSharp
             byte value = 0x00;
             if(addr == 0x4015)
             {
-                value |= (byte)((pulse1.p_lc.counter > 0) ? 0x01 : 0x00);
-                value |= (byte)((pulse2.p_lc.counter > 0) ? 0x02 : 0x00);		
-                value |= (byte)((noise.n_lc.counter > 0) ? 0x04 : 0x00);
+                //value |= (byte)((pulse1.p_lc.counter > 0) ? 0x01 : 0x00);
+                //value |= (byte)((pulse2.p_lc.counter > 0) ? 0x02 : 0x00);		
+                //value |= (byte)((noise.n_lc.counter > 0) ? 0x04 : 0x00);
                 //clears inhibit
                 //inhibit4017 = false;
                 //return ((byte)(irqset ? 1 << 6 : 0), 0xFF);
@@ -229,7 +229,7 @@ namespace NesSharp
                 n_sample = a;
                 n_output = b;
 
-                n_seq = new Sequencer(z, g);
+                n_seq = new Sequencer(z, 0xDBDB);
                 n_env = new Envelope(i, h);
                 n_lc = new Lengthcounter(j);
             }
@@ -424,10 +424,10 @@ namespace NesSharp
             noise.n_seq.Clock(noise.n_status,
                 s => (((s & 0x0001) ^ ((s & 0x0002) >> 1)) << 14) | ((s & 0x7FFF) >> 1)
             );
-            if (noise.n_lc.counter > 0 && noise.n_seq.counter >= 8)
-            {
+            //if (noise.n_lc.counter > 0 && noise.n_seq.counter >= 8)
+            //{
                 noise.n_output = noise.n_seq.output * ((noise.n_env.output - 1) / 16.0);
-            }
+            //}
 
                 if (!pulse1.p_status) pulse1.p_output = 0;
                 if (!pulse2.p_status) pulse2.p_output = 0;

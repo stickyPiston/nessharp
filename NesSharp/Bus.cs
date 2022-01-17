@@ -109,7 +109,8 @@ namespace NesSharp {
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
 
-        private short[] samples = new short[13538];
+        private int sampleSize = 44100;
+        private short[] samples = new short[44100];
         private ushort sampleCounter = 0;
 
         public void Tick() {
@@ -145,14 +146,14 @@ namespace NesSharp {
 
             if (clock == 0)
             {
-                if (sampleCounter == 13538)
+                if (sampleCounter == sampleSize)
                 {// 512, 768, 1024, 2048, 2304, 2321, 2560
                     var buffer = new SoundBuffer(samples, 1, 44100);//44100
                     var sound = new Sound(buffer);
                     sound.Play();
                     Console.WriteLine((short)(apu.noiseOutput() * 10000));
                     sampleCounter = 0;
-                    Array.Clear(samples, 0, 13538);
+                    Array.Clear(samples, 0, sampleSize);
                 }
                 else
                 {
@@ -161,7 +162,7 @@ namespace NesSharp {
             }
 
             clock += 1;
-            clock %= 6;
+            clock %= 121;
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>
