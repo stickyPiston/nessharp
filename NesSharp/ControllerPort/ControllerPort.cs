@@ -11,6 +11,7 @@ namespace NesSharp
 
         public void Write(ushort addr, byte data)
         {
+           data &= 1;
            if(data == 0 && LastWritten == 1)
            {
                Cs[0].latchInput();
@@ -19,16 +20,9 @@ namespace NesSharp
            LastWritten = data;
         }
 
-        public void register(InputDevice D)
+        public void register(InputDevice D, int idx)
         {
-            if (Cs[0] == null)
-            { 
-                Cs[0] = D; 
-            }
-            else
-            {
-                Cs[1] = D;
-            }
+            Cs[idx] = D; 
         }
     }
 }

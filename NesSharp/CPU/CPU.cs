@@ -118,8 +118,6 @@ namespace NesSharp
             NMI, IRQ
         }
 
-        private ISet<object> incomingIRQ = new HashSet<object>();
-
         private bool incomingNMI;
         private bool prevIncomingNMI;
 
@@ -142,6 +140,11 @@ namespace NesSharp
         {
             SetInstruction(RESETInstruction);
             this.cycle = 0;
+            this.incomingNMI = false;
+            this.prevIncomingNMI = false;
+            this.polled = null;
+            this.prevpolled = null;
+            this.prevprevpolled = null;
         }
 
         public void LowNMI()
@@ -154,29 +157,19 @@ namespace NesSharp
             incomingNMI = false;
         }
 
-        public void HighIRQ(object sender)
-        {
-            incomingIRQ.Add(sender);
-        }
-
-        public void LowIRQ(object sender)
-        {
-            incomingIRQ.Remove(sender);
-        }
-
         private void SetInstruction(Instruction instr)
         {
             this.instr = instr;
         }
 
-        private void CycleEnd() {
+        public void CycleEnd() {
             prevprevpolled = prevpolled;
             prevpolled = polled;
 
             if (polled != HardwareInterrupt.NMI) {
                 if (!prevIncomingNMI && incomingNMI) {
                     polled = HardwareInterrupt.NMI;
-                } else if (incomingIRQ.Count > 0 && P.I == 0) {
+                } else if (bus.IsIRQHigh() && P.I == 0) {
                     polled = HardwareInterrupt.IRQ;
                 } else {
                     polled = null;
@@ -222,7 +215,6 @@ namespace NesSharp
                     SetInstruction(instructions[val]);
                     
                     // Continue to next cycle
-                    CycleEnd();
                     cycle += 1;
 
                     // Return so we don't execute another cycle
@@ -234,7 +226,6 @@ namespace NesSharp
             instr.Cycles[cycle](this);
 
             // Continue to next cycle
-            CycleEnd();
             cycle += 1;
         }
 

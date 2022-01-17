@@ -7,7 +7,7 @@ namespace NesSharp.PPU
 {
     public class PPU : IClockable, IAddressable
     {
-        private Bus MainBus;
+        internal Bus MainBus;
 
         private Image currentFrame;
         private Texture frameBuffer;
@@ -35,14 +35,15 @@ namespace NesSharp.PPU
         private byte PaletteShift2;
 
         private bool ODDFRAME;
-        private uint pixel;
-        private uint scanline;
+        public uint pixel;
+        public uint scanline;
 
         private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
         private SpriteAttribute[] spriteAttributeLatches = new SpriteAttribute[8];
         private byte[] spriteXCounters = new byte[8];
         private bool isRenderingSpriteZero;
         private bool secondaryOamHasSpriteZero;
+        private bool rendering;
 
         private ushort DMACopyAddr;
 
@@ -53,12 +54,14 @@ namespace NesSharp.PPU
             mask = new PPUMASK();
             status = new PPUSTATUS
             {
-                VblankStarted = true,
-                SpriteOverflow = true
+                // VblankStarted = true,
+                // SpriteOverflow = true
             };
-            ODDFRAME = false;
+            ODDFRAME = true;
+            scanline = 261;
+            pixel = 340;
 
-            bus = new PPUMemoryBus();
+            bus = new PPUMemoryBus(this);
 
             this.currentFrame = new Image(256, 240);
             this.frameBuffer = frameBuffer;
@@ -75,38 +78,20 @@ namespace NesSharp.PPU
 
         private byte tempSpriteByte;
 
-
-        public int FrameCycleCount()
-        {
-            if ((mask.ShowBackground || mask.ShowSprites) && ODDFRAME)
-            {
-                return 262 * 341 - 1;
-            }
-            else
-            {
-                return 262 * 341;
-            }
-        }
-
         private byte secOamAddr = 0;
         private bool secOamFull;
         private bool oamAddrOverflow;
         private int copySpriteDataCounter;
         private int SpriteIndex;
+        private bool preventVbl = false;
 
         private int[] SpriteRenderingCounters = new int[8];
 
-        public void Cycle()
-        {
-            if (mask.ShowSprites)
+        public void DrawPixel(uint pixel) {
+            if (scanline <= 239 && 0 <= pixel && pixel <= 255)
             {
-                DoSpriteFetches();
-            }
-
-            if (scanline <= 239 && 1 <= pixel && pixel <= 256)
-            {
-                bool renderBack = mask.ShowBackground && (mask.BackgroundOnLeft8 || pixel > 8);
-                bool renderSprite = mask.ShowSprites && (mask.SpritesOnLeft8 || pixel > 8);
+                bool renderBack = mask.ShowBackground && (mask.BackgroundOnLeft8 || pixel > 7);
+                bool renderSprite = mask.ShowSprites && (mask.SpritesOnLeft8 || pixel > 7);
 
                 if (renderBack && renderSprite)
                 {
@@ -154,7 +139,7 @@ namespace NesSharp.PPU
                             }
 
                             if (i == 0 && spriteColorIndex != 0 && backgroundColorIndex != 0 && isRenderingSpriteZero &&
-                                pixel != 256)
+                                pixel != 255)
                             {
                                 status.Sprite0Hit = true;
                             }
@@ -165,7 +150,7 @@ namespace NesSharp.PPU
                     }
 
 
-                    currentFrame.SetPixel(pixel - 1, scanline, color);
+                    currentFrame.SetPixel(pixel, scanline, color);
                 }
                 else if (renderBack)
                 {
@@ -174,7 +159,7 @@ namespace NesSharp.PPU
                     int paletteIndex = (((PaletteShift1 << x) & 0x80) >> 7) | (((PaletteShift2 << x) & 0x80) >> 6);
 
                     // currentFrame.SetPixel(pixel-1, scanline, new Color((byte)pixel, (byte)scanline, 1));
-                    currentFrame.SetPixel(pixel - 1, scanline,
+                    currentFrame.SetPixel(pixel, scanline,
                         colorIndex == 0
                             ? Palette.BasicColors[bus.Palettes.background]
                             : bus.Palettes.Backgrounds[paletteIndex][colorIndex - 1]);
@@ -209,10 +194,14 @@ namespace NesSharp.PPU
                                 color = bus.Palettes.Sprites[spriteAttributeLatches[i].Palette][spriteColorIndex - 1];
                             }
 
-                            currentFrame.SetPixel(pixel - 1, scanline, color);
+                            currentFrame.SetPixel(pixel, scanline, color);
                             break;
                         }
                     }
+                }
+                else
+                {
+                    currentFrame.SetPixel(pixel, scanline, Palette.BasicColors[bus.Palettes.background]);
                 }
 
                 if (mask.ShowSprites)
@@ -231,9 +220,17 @@ namespace NesSharp.PPU
                     }
                 }
             }
+        }
 
-            if (mask.ShowBackground)
-            {
+        public void Cycle()
+        {
+            IncrementPixel();
+
+            DrawPixel(pixel - 1);
+
+            if (mask.ShowBackground || mask.ShowSprites) {
+                DoSpriteFetches();
+
                 if (scanline <= 239)
                 {
                     // ShiftRegs();
@@ -250,10 +247,16 @@ namespace NesSharp.PPU
                     {
                         // v = (ushort) ((v & ~0x081f) | (t & 0x081f));
                         v = (ushort) ((v & ~0x041f) | (t & 0x041f));
+                        MainBus.mapper.NotifyVramAddrChange(v);
+
                     }
                     else if (pixel >= 321 && pixel <= 336)
                     {
                         ShiftRegs();
+                        DoBackgroundFetches();
+                    }
+                    else if (pixel >= 337 && pixel <= 340)
+                    {
                         DoBackgroundFetches();
                     }
                     //throw new System.NotImplementedException();
@@ -272,21 +275,54 @@ namespace NesSharp.PPU
                     {
                         //hori(v) = hori(t)
                         v = (ushort) ((v & ~0x041f) | (t & 0x041f));
+                        MainBus.mapper.NotifyVramAddrChange(v);
                     }
                     else if (pixel >= 280 && pixel <= 304)
                     {
                         //vert(v) = vert(t)
                         v = (ushort) ((v & ~0x7be0) | (t & 0x7be0));
+                        MainBus.mapper.NotifyVramAddrChange(v);
                     }
                     else if (pixel >= 321 && pixel <= 336)
                     {
                         ShiftRegs();
                         DoBackgroundFetches();
                     }
+                    else if (pixel >= 337 && pixel <= 340)
+                    {
+                        DoBackgroundFetches();
+                    }
                 }
             }
 
-            IncrementPixel();
+            if (scanline == 241 && pixel == 1 && !preventVbl)
+            {
+                StartVBlank();
+            }
+
+            preventVbl = false;
+
+            // In theory this should be pixel 1
+            if (scanline == 261 && pixel == 0)
+            {
+                status.Sprite0Hit = false;
+                status.SpriteOverflow = false;
+            }
+
+            if (scanline == 261 && pixel == 1)
+            {
+                EndVBlank();
+            }
+
+            if (rendering)
+            {
+                if (scanline == 261 && pixel == 339 && ODDFRAME)
+                {
+                    pixel += 1;
+                }
+            }
+
+            rendering = mask.ShowSprites || mask.ShowBackground;
         }
 
         private void DoSpriteFetches()
@@ -397,7 +433,7 @@ namespace NesSharp.PPU
                                 spritePatternAddress = (ushort) ((secondaryOam.Sprites[SpriteIndex].index & 1) << 12);
                                 spritePatternAddress |=
                                     (ushort) ((secondaryOam.Sprites[SpriteIndex].index & 0xfe) << 4);
-                                if (scanline - secondaryOam.Sprites[SpriteIndex].Y >= 8)
+                                if ((scanline - secondaryOam.Sprites[SpriteIndex].Y >= 8) ^ spriteAttributeLatches[SpriteIndex].VerticalFlip == SpriteFlip.Flipped)
                                 {
                                     spritePatternAddress |= 1 << 4;
                                 }
@@ -410,7 +446,7 @@ namespace NesSharp.PPU
                             break;
                         case 0:
                             isRenderingSpriteZero = secondaryOamHasSpriteZero;
-                            SpriteIndex++;
+                            SpriteIndex = (SpriteIndex + 1) % 8;
                             break;
                     }
                 }
@@ -522,36 +558,16 @@ namespace NesSharp.PPU
                     ODDFRAME = !ODDFRAME;
                 }
             }
-
-            if (scanline == 241 && pixel == 1)
-            {
-                StartVBlank();
-            }
-
-            if (scanline == 261 && pixel == 1)
-            {
-                status.Sprite0Hit = false;
-                status.SpriteOverflow = false;
-            }
-
-            // Pixel 2 so that the CPU can still read the correct value
-            if (scanline == 261 && pixel == 2)
-            {
-                EndVBlank();
-            }
-
-            if (mask.ShowBackground || mask.ShowSprites)
-            {
-                if (scanline == 261 && pixel == 339 && ODDFRAME)
-                {
-                    pixel += 1;
-                }
-            }
         }
 
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            ODDFRAME = false;
+            control.FromByte(0);
+            mask.FromByte(0);
+            Write(0x2005, 0);
+            Write(0x2005, 0);
+            w = false;
         }
 
         //source: https://wiki.nesdev.org/w/index.php?title=PPU_scrolling
@@ -566,6 +582,7 @@ namespace NesSharp.PPU
             {
                 v += 1;
             }
+            //MainBus.mapper.NotifyVramAddrChange(v);
         }
 
         void YIncrement()
@@ -594,6 +611,7 @@ namespace NesSharp.PPU
 
                 v = (ushort) ((v & 0xfc1f) | (y << 5));
             }
+            //MainBus.mapper.NotifyVramAddrChange(v);
         }
 
         byte getTile()
@@ -617,7 +635,10 @@ namespace NesSharp.PPU
             {
                 case 0x2002:
                 {
-                    if (scanline == 241 && pixel == 1) status.VblankStarted = false;
+                    if (scanline == 241 && pixel == 0) {
+                        preventVbl = true;
+                        Console.WriteLine("VBL skip!");
+                    }
 
                     byte val = status.ToByte();
 
@@ -630,6 +651,7 @@ namespace NesSharp.PPU
                 {
                     byte val = bus.BufferedRead(v);
                     v += control.VramAddrInc;
+                    MainBus.mapper.NotifyVramAddrChange(v);
                     return (val, 0xFF);
                 }
                 default:
@@ -649,8 +671,7 @@ namespace NesSharp.PPU
 
                     control.FromByte(data);
 
-                    // On scanline 261 pixel 1 no NMI should occur
-                    if (control.GenNMI_VBL && status.VblankStarted && (scanline < 261 || pixel == 0))
+                    if (control.GenNMI_VBL && status.VblankStarted)
                         MainBus.LowNMI();
                     else MainBus.HighNMI();
 
@@ -695,13 +716,16 @@ namespace NesSharp.PPU
                     {
                         t = (ushort) ((t & 0xff00) | data);
                         v = t;
+                        MainBus.mapper.NotifyVramAddrChange(v);
                     }
-
+    
                     w = !w;
                     break;
                 case 0x2007:
                     bus.Write(v, data);
                     v += control.VramAddrInc;
+                    MainBus.mapper.NotifyVramAddrChange(v);
+
                     break;
                 case 0x4014:
                     MainBus.BeginOAM((ushort) (data << 8));

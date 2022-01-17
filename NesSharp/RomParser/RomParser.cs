@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using NesSharp.Mappers;
 
 namespace NesSharp
 {
@@ -12,7 +13,7 @@ namespace NesSharp
             if (bytes[0] == 'N' && bytes[1] == 'E' && bytes[2] == 'S' && bytes[3] == 0x1a)
             {
                 // return ((bytes[7] & 2) == 0 && (bytes[7] & 4) == 4) ? ParseNes2(bytes) : ParseINes(bytes);
-                return ParseINes(bytes);
+                return ParseINes(bytes, filename);
             }
             else
             {
@@ -22,7 +23,7 @@ namespace NesSharp
             return null;
         }
 
-        public static Cartridge ParseINes(byte[] bytes)
+        public static Cartridge ParseINes(byte[] bytes, string filename)
         {
             var cartridge = new Cartridge();
 
@@ -31,7 +32,7 @@ namespace NesSharp
             cartridge.mirroring = (bytes[6] & 1) > 0 ? MirrorType.vertical : MirrorType.horizontal;
             cartridge.batteryRam = (bytes[6] & 2) > 0;
             cartridge.trainer = (bytes[6] & 4) > 0;
-            cartridge.fourScreen = (bytes[6] & 8) > 0;
+            cartridge.mirroring = (bytes[6] & 8) > 0 ? MirrorType.fourScreen : cartridge.mirroring;
             cartridge.mapperType = (bytes[6] & 0xF0) >> 4;
 
             cartridge.consoleType = (bytes[7] & 1) > 0 ? ConsoleType.VSYS : ConsoleType.NES;
@@ -48,21 +49,40 @@ namespace NesSharp
 
             int romsize = 16 * 1024 * cartridge.rombanks, vromsize = 8 * 1024 * cartridge.vrombanks;
 
-            cartridge.trainerbytes = new byte[512];
-            cartridge.rombytes     = new byte[romsize];
-            cartridge.vrombytes    = new byte[vromsize];
+            byte[] trainerbytes = new byte[512];
+            byte[] rombytes     = new byte[romsize];
+            byte[] vrombytes    = new byte[vromsize];
 
             if (cartridge.trainer)
             {
-                Array.Copy(bytes, 16, cartridge.trainerbytes, 0, 512);
-                Array.Copy(bytes, 528, cartridge.rombytes, 0, romsize);
-                Array.Copy(bytes, romsize + 528, cartridge.vrombytes, 0, vromsize);
+                Array.Copy(bytes, 16, trainerbytes, 0, 512);
+                Array.Copy(bytes, 528, rombytes, 0, romsize);
+                Array.Copy(bytes, romsize + 528, vrombytes, 0, vromsize);
             }
             else
             {
-                Array.Copy(bytes, 16, cartridge.rombytes, 0, romsize);
-                Array.Copy(bytes, 16 + romsize, cartridge.vrombytes, 0, vromsize);
+                Array.Copy(bytes, 16, rombytes, 0, romsize);
+                Array.Copy(bytes, 16 + romsize, vrombytes, 0, vromsize);
             }
+
+            switch (cartridge.mapperType) {
+                case 0:
+                    cartridge.mapper = new NRom(rombytes, vrombytes, cartridge.mirroring);
+                    break;
+                case 1:
+                    cartridge.mapper = new MMC1(rombytes, vrombytes, cartridge.mirroring, cartridge.batteryRam ? filename + ".save" : null);
+                    break;
+                 case 2:
+                     cartridge.mapper = new UxRom(rombytes, vrombytes, cartridge.mirroring);
+                     break;
+                 case 4:
+                     cartridge.mapper = new MMC3(rombytes, vrombytes, cartridge.mirroring);
+                     break;
+                default:
+                    throw new Exception($"Mapper {cartridge.mapperType} not yet implemented.");
+            }
+            
+
             // TODO: Bind ROM and VROM to Mapper
             return cartridge;
         }
