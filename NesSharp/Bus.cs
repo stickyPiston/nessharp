@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System;
 
+using NesSharp.Mappers;
+
 namespace NesSharp {
     public struct Range {
         public ushort start;
@@ -33,26 +35,71 @@ namespace NesSharp {
         }
     }
 
+    public class Combinator : IAddressable {
+        private IAddressable[] parents;
+        private ushort start;
+        private ushort repeat;
+
+        public Combinator(IAddressable[] parents, ushort start, ushort repeat) {
+            this.parents = parents;
+            this.start = start;
+            this.repeat = repeat;
+        }
+
+        public (byte, byte) Read(ushort addr) {
+            return parents[(addr - start) / repeat].Read(addr);
+        }
+
+        public void Write(ushort addr, byte data) {
+            parents[(addr - start) / repeat].Write(addr, data);
+        }
+    }
+
     public class Bus {
         private CPU cpu;
         private PPU.PPU ppu;
+        internal BaseMapper mapper;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        private byte clock = 0;
+        private byte clock = 2;
         private byte open = 0;
 
         private int OAMDMACycles = 0;
         private byte OAMDATA = 0;
         private ushort DMACopyAddr;
 
+        public bool IsIRQHigh() {
+            return mapper != null && mapper.IRQ;
+        }
+
         //public Run(string romFilepath) { when the emulator accepts roms
         public void RunFrame() {
-            int frames = ppu.FrameCycleCount();
-            for(int i = 0; i < frames; i++)
+            do
             {
                 this.Tick();
             }
+            while (ppu.scanline != 0 || ppu.pixel != 0);
+        }
+
+        public void RunPreVblank() {
+            do
+            {
+                this.Tick();
+            }
+            while (ppu.scanline != 241 || ppu.pixel != 12);
+        }
+
+        public string DumpCycle() {
+            return $"{cpu.DumpCycle()} SL {ppu.scanline} CYC {ppu.pixel}";
+        }
+
+        public void Reset() {
+            cpu.Reset();
+            ppu.Reset();
+            OAMDMACycles = 0;
+            OAMDATA = 0;
+            clock = 0;
         }
 
         public void BeginOAM(ushort DMACopyAddr) {
@@ -61,24 +108,31 @@ namespace NesSharp {
         }
 
         public void Tick() {
-            ppu.Cycle();
             if (clock % 3 == 0)
             {
                 if (OAMDMACycles == 0) {
                     cpu.Cycle();
-                } else if (OAMDMACycles <= 512) {
-                    int cycle = 512 - OAMDMACycles;
-                    switch (cycle & 1) {
-                        case 0:
-                            OAMDATA = Read((ushort) (DMACopyAddr | (cycle >> 1)));
-                            break;
-                        case 1:
-                            ppu.Write(0x2004, OAMDATA);
-                            break;
+                } else {
+                    if (OAMDMACycles <= 512) {
+                        int cycle = 512 - OAMDMACycles;
+                        switch (cycle & 1) {
+                            case 0:
+                                OAMDATA = Read((ushort) (DMACopyAddr | (cycle >> 1)));
+                                break;
+                            case 1:
+                                ppu.Write(0x2004, OAMDATA);
+                                break;
+                        }
                     }
+                    OAMDMACycles--;
                 }
-                // Console.WriteLine(cpu.DumpCycle());
-            if (OAMDMACycles > 0) OAMDMACycles--;
+            }
+
+            ppu.Cycle();
+
+            if (clock % 3 == 0 && OAMDMACycles == 0)
+            {
+                cpu.CycleEnd();
             }
 
             // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
@@ -100,18 +154,6 @@ namespace NesSharp {
             cpu.HighNMI();
         }
 
-        /// <summary>Keeps the IRQ line from the sender to the CPU high, until LowIRQ is called.</summary>
-        public void HighIRQ(object sender)
-        {
-            cpu.HighIRQ(sender);
-        }
-
-        /// <summary>Resets the IRQ line from the sender to the CPU.</summary>
-        public void LowIRQ(object sender)
-        {
-            cpu.LowIRQ(sender);
-        }
-
         public void Register(IAddressable chip, Range[] ranges) {
             chips.Add(chip);
             foreach(var range in ranges)
@@ -128,6 +170,22 @@ namespace NesSharp {
         public void Register(PPU.PPU ppu)
         {
             this.ppu = ppu;
+            ppu.bus.Palettes = new PPU.PPUPalettes();
+
+            Register(new Repeater(ppu, 0x2000, 8), new Range[] { new Range(0x2000, 0x3fff)});
+            Register(ppu, new []{new Range(0x4014, 0x4014)});
+        }
+
+        public void Register(BaseMapper mapper)
+        {
+            this.mapper = mapper;
+            ppu.bus.Nametables = mapper.Nametables;
+            ppu.bus.Patterntables = mapper.CHR;
+            Register(mapper.PRG, new[] { new Range(0x8000, 0xffff) });
+            
+            if (mapper.PRGRAM != null) {
+                Register(mapper.PRGRAM, new Range[] {new Range(0x6000, 0x7FFF)});
+            }
         }
 
         public byte Read(ushort addr) {
@@ -156,7 +214,7 @@ namespace NesSharp {
                 }
            }
 
-           throw new Exception($"Can't write to {addr:x4}");
+           // throw new Exception($"Can't write to {addr:x4}");
         }
     };
 }
