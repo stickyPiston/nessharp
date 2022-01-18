@@ -1,7 +1,6 @@
 ﻿using System;
 using SFML.Graphics;
-using SFML.System;
-using SFML.Window;
+using System.IO;
 
 namespace NesSharp.PPU
 {
@@ -35,8 +34,8 @@ namespace NesSharp.PPU
         private byte PaletteShift2;
 
         private bool ODDFRAME;
-        public uint pixel;
-        public uint scanline;
+        public ushort pixel;
+        public ushort scanline;
 
         private (byte, byte)[] spritePatternShiftRegs = new (byte, byte)[8];
         private SpriteAttribute[] spriteAttributeLatches = new SpriteAttribute[8];
@@ -44,8 +43,132 @@ namespace NesSharp.PPU
         private bool isRenderingSpriteZero;
         private bool secondaryOamHasSpriteZero;
         private bool rendering;
+        private bool prevRendering;
 
-        private ushort DMACopyAddr;
+        public void SaveState(BinaryWriter writer) {
+            writer.Write(control.ToByte());
+            writer.Write(status.ToByte());
+            writer.Write(mask.ToByte());
+            writer.Write(v);
+            writer.Write(t);
+            writer.Write(x);
+            writer.Write(w);
+            writer.Write(PatternTableShift1);
+            writer.Write(PatternTableShift2);
+            writer.Write(PaletteShift1);
+            writer.Write(PaletteShift2);
+            writer.Write(paletteLatch1);
+            writer.Write(paletteLatch2);
+            writer.Write(ODDFRAME);
+            writer.Write(pixel);
+            writer.Write(scanline);
+            foreach (var bb in spritePatternShiftRegs) {
+                writer.Write(bb.Item1);
+                writer.Write(bb.Item2);
+            }
+            foreach (var attrib in spriteAttributeLatches) {
+                writer.Write(attrib.ToByte());
+            }
+            foreach (var counter in spriteXCounters) {
+                writer.Write(counter);
+            }
+            writer.Write(isRenderingSpriteZero);
+            writer.Write(secondaryOamHasSpriteZero);
+            writer.Write(rendering);
+            writer.Write(prevRendering);
+            writer.Write(tempBackgroundByte);
+            writer.Write(nametableByte);
+            writer.Write(attrtableByte);
+            writer.Write(patterntableWord);
+            writer.Write(tempSpriteByte);
+            writer.Write(secOamAddr);
+            writer.Write(secOamFull);
+            writer.Write(oamAddrOverflow);
+            writer.Write(SpriteIndex);
+            writer.Write(preventVbl);
+            foreach (var counter in SpriteRenderingCounters) {
+                writer.Write(counter);
+            }
+
+            // OAM
+            for (ushort i = 0; i < 64 * 4; i++) {
+                writer.Write(oam.Read(i));
+            }
+            for (ushort i = 0; i < 8 * 4; i++) {
+                writer.Write(secondaryOam.Read(i));
+            }
+
+            // Palettes
+            writer.Write(bus.Palettes.background);
+            for (int i = 0; i < 4 * 4; i++) {
+                writer.Write(bus.Palettes.Backgrounds[i / 4].Read((ushort) (i % 4)));
+            }
+            for (int i = 0; i < 4 * 4; i++) {
+                writer.Write(bus.Palettes.Sprites[i / 4].Read((ushort) (i % 4)));
+            }
+        }
+
+        public void LoadState(BinaryReader reader) {
+            control.FromByte(reader.ReadByte());
+            status.FromByte(reader.ReadByte());
+            mask.FromByte(reader.ReadByte());
+            v = reader.ReadUInt16();
+            t = reader.ReadUInt16();
+            x = reader.ReadByte();
+            w = reader.ReadBoolean();
+            PatternTableShift1 = reader.ReadUInt16();
+            PatternTableShift2 = reader.ReadUInt16();
+            PaletteShift1 = reader.ReadByte();
+            PaletteShift2 = reader.ReadByte();
+            paletteLatch1 = reader.ReadByte();
+            paletteLatch2 = reader.ReadByte();
+            ODDFRAME = reader.ReadBoolean();
+            pixel = reader.ReadUInt16();
+            scanline = reader.ReadUInt16();
+            for (int i = 0; i < 8; i++) {
+                spritePatternShiftRegs[i] = (reader.ReadByte(), reader.ReadByte());
+            }
+            for (int i = 0; i < 8; i++) {
+                spriteAttributeLatches[i].FromByte(reader.ReadByte());
+            }
+            for (int i = 0; i < 8; i++) {
+                spriteXCounters[i] = reader.ReadByte();
+            }
+            isRenderingSpriteZero = reader.ReadBoolean();
+            secondaryOamHasSpriteZero = reader.ReadBoolean();
+            rendering = reader.ReadBoolean();
+            prevRendering = reader.ReadBoolean();
+            tempBackgroundByte = reader.ReadByte();
+            nametableByte = reader.ReadByte();
+            attrtableByte = reader.ReadByte();
+            patterntableWord = reader.ReadUInt16();
+            tempSpriteByte = reader.ReadByte();
+            secOamAddr = reader.ReadByte();
+            secOamFull = reader.ReadBoolean();
+            oamAddrOverflow = reader.ReadBoolean();
+            SpriteIndex = reader.ReadByte();
+            preventVbl = reader.ReadBoolean();
+            for (int i = 0; i < 8; i++) {
+                SpriteRenderingCounters[i] = reader.ReadByte();
+            }
+
+            // OAM
+            for (ushort i = 0; i < 64 * 4; i++) {
+                oam.Write(i, reader.ReadByte());
+            }
+            for (ushort i = 0; i < 8 * 4; i++) {
+                secondaryOam.Write(i, reader.ReadByte());
+            }
+
+            // Palettes
+            bus.Palettes.background = reader.ReadByte();
+            for (int i = 0; i < 4 * 4; i++) {
+                bus.Palettes.Backgrounds[i / 4].Write((ushort) (i % 4), reader.ReadByte());
+            }
+            for (int i = 0; i < 4 * 4; i++) {
+                bus.Palettes.Sprites[i / 4].Write((ushort) (i % 4), reader.ReadByte());
+            }
+        }
 
         public PPU(Texture frameBuffer, Bus mainBus)
         {
@@ -57,7 +180,7 @@ namespace NesSharp.PPU
                 // VblankStarted = true,
                 // SpriteOverflow = true
             };
-            ODDFRAME = true;
+            ODDFRAME = false;
             scanline = 261;
             pixel = 340;
 
@@ -81,11 +204,10 @@ namespace NesSharp.PPU
         private byte secOamAddr = 0;
         private bool secOamFull;
         private bool oamAddrOverflow;
-        private int copySpriteDataCounter;
-        private int SpriteIndex;
-        private bool preventVbl = false;
+        private byte SpriteIndex;
+        internal bool preventVbl = false;
 
-        private int[] SpriteRenderingCounters = new int[8];
+        private byte[] SpriteRenderingCounters = new byte[8];
 
         public void DrawPixel(uint pixel) {
             if (scanline <= 239 && 0 <= pixel && pixel <= 255)
@@ -99,7 +221,6 @@ namespace NesSharp.PPU
                                                (((PatternTableShift2 << x) & 0x8000) >> 14);
                     int backgroundPaletteIndex =
                         (((PaletteShift1 << x) & 0x80) >> 7) | (((PaletteShift2 << x) & 0x80) >> 6);
-
 
                     Color color = backgroundColorIndex == 0
                         ? Palette.BasicColors[bus.Palettes.background]
@@ -226,9 +347,9 @@ namespace NesSharp.PPU
         {
             IncrementPixel();
 
-            DrawPixel(pixel - 1);
+            DrawPixel((uint) (pixel - 1));
 
-            if (mask.ShowBackground || mask.ShowSprites) {
+            if (rendering) {
                 DoSpriteFetches();
 
                 if (scanline <= 239)
@@ -300,7 +421,6 @@ namespace NesSharp.PPU
                 StartVBlank();
             }
 
-            preventVbl = false;
 
             // In theory this should be pixel 1
             if (scanline == 261 && pixel == 0)
@@ -322,6 +442,7 @@ namespace NesSharp.PPU
                 }
             }
 
+            prevRendering = rendering;
             rendering = mask.ShowSprites || mask.ShowBackground;
         }
 
@@ -418,9 +539,9 @@ namespace NesSharp.PPU
                             break;
                         case 7:
                             ushort spritePatternAddress;
-                            uint y = spriteAttributeLatches[SpriteIndex].VerticalFlip == SpriteFlip.Flipped
+                            uint y = (uint) (spriteAttributeLatches[SpriteIndex].VerticalFlip == SpriteFlip.Flipped
                                 ? 7 - (scanline - secondaryOam.Sprites[SpriteIndex].Y)
-                                : (scanline - secondaryOam.Sprites[SpriteIndex].Y);
+                                : (scanline - secondaryOam.Sprites[SpriteIndex].Y));
 
                             if (control.SpriteSize == SpriteSize._8x8)
                             {
@@ -446,7 +567,7 @@ namespace NesSharp.PPU
                             break;
                         case 0:
                             isRenderingSpriteZero = secondaryOamHasSpriteZero;
-                            SpriteIndex = (SpriteIndex + 1) % 8;
+                            SpriteIndex = (byte) ((SpriteIndex + 1) % 8);
                             break;
                     }
                 }
@@ -510,10 +631,12 @@ namespace NesSharp.PPU
                     // paletteLatch2 = (byte) (((attrtableByte >> (((v & 0x4000) >> 12) | ((x & 0b100)))) >> 2) & 1);
                     PatternTableShift1 |= (ushort) ((patterntableWord >> 8) & 0x00ff);
                     PatternTableShift2 |= (ushort) (patterntableWord & 0x00ff);
-                    if (pixel == 256)
-                        YIncrement();
-                    else
+
+                    if (prevRendering) {
                         XIncrement();
+                        if (pixel == 256)
+                            YIncrement();
+                    }
                     break;
             }
         }
@@ -548,13 +671,14 @@ namespace NesSharp.PPU
 
         private void IncrementPixel()
         {
-            pixel = (pixel + 1) % 341;
+            pixel = (ushort) ((pixel + 1) % 341);
             if (pixel == 0)
             {
-                scanline = (scanline + 1) % 262;
+                scanline = (ushort) ((scanline + 1) % 262);
 
                 if (scanline == 0)
                 {
+                    preventVbl = false;
                     ODDFRAME = !ODDFRAME;
                 }
             }
@@ -655,7 +779,8 @@ namespace NesSharp.PPU
                     return (val, 0xFF);
                 }
                 default:
-                    throw new NotImplementedException($"Could not read {addr:x4}");
+                    return (0, 0xFF);
+                    // throw new NotImplementedException($"Could not read {addr:x4}");
             }
         }
 
@@ -732,7 +857,6 @@ namespace NesSharp.PPU
                     break;
                 default:
                     throw new NotImplementedException($"Writing to address 0x{addr:X4} is not implemented");
-                    break;
             }
         }
     }
@@ -752,9 +876,11 @@ namespace NesSharp.PPU
         public SpriteSize SpriteSize;
         public bool GenNMI_VBL;
 
+        public byte backup;
+
         public byte ToByte()
         {
-            throw new NotImplementedException();
+            return backup;
         }
 
         public void FromByte(byte data)
@@ -766,6 +892,8 @@ namespace NesSharp.PPU
             SpriteSize = (data & 0b100000) == 0 ? SpriteSize._8x8 : SpriteSize._8x16;
             //PPU master/slave select not implemented
             GenNMI_VBL = (data & 0x80) != 0;
+
+            backup = data;
         }
     }
 
@@ -780,10 +908,11 @@ namespace NesSharp.PPU
         public bool EmphasizeGreen;
         public bool EmphasizeBlue;
 
+        public byte backup;
 
         public byte ToByte()
         {
-            throw new NotImplementedException();
+            return backup;
         }
 
         public void FromByte(byte data)
@@ -797,6 +926,7 @@ namespace NesSharp.PPU
             EmphasizeGreen = (data & 0x40) != 0;
             EmphasizeBlue = (data & 0x80) != 0;
 
+            backup = data;
 
             // Console.WriteLine($"Show Background = {ShowBackground}");
             // Console.WriteLine($"Show Sprites = {ShowSprites}");
@@ -805,14 +935,13 @@ namespace NesSharp.PPU
 
     struct PPUSTATUS
     {
-        public byte lastRegWrite;
         public bool SpriteOverflow;
         public bool Sprite0Hit;
         public bool VblankStarted;
 
         public byte ToByte()
         {
-            byte val = (byte) (lastRegWrite & 0x1f);
+            byte val = 0;
 
             if (SpriteOverflow)
                 val |= 0x20;
@@ -826,7 +955,9 @@ namespace NesSharp.PPU
 
         public void FromByte(byte data)
         {
-            throw new NotImplementedException();
+            SpriteOverflow = (data & 0x20) != 0;
+            Sprite0Hit = (data & 0x40) != 0;
+            VblankStarted = (data & 0x80) != 0;
         }
     }
 }

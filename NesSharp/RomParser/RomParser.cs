@@ -85,6 +85,9 @@ namespace NesSharp
                 case 4:
                     cartridge.mapper = new MMC3(rombytes, vrombytes, cartridge.mirroring);
                     break;
+                case 7:
+                     cartridge.mapper = new AxRom(rombytes);
+                     break;
                 case 11:
                     cartridge.mapper = new ColorDreams(rombytes, vrombytes, cartridge.mirroring);
                     break;

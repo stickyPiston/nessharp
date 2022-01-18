@@ -1,15 +1,13 @@
 using SFML.Window;
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using SFML.System;
 using SFML.Graphics;
-using NesSharp.PPU;
 using Sprite = SFML.Graphics.Sprite;
 using Eto.Forms;
-using Eto.Drawing;
 using Keyboard = SFML.Window.Keyboard;
-using KeyEventArgs = SFML.Window.KeyEventArgs;
 using System.Collections.Generic;
 
 namespace NesSharp {
@@ -57,9 +55,14 @@ namespace NesSharp {
             // Content = panel = new Panel();
 
             this.Menu = new MenuBar();
-            ButtonMenuItem item = new ButtonMenuItem { Text = "ROM" };
+            ButtonMenuItem item = new ButtonMenuItem { Text = "Cartridge" };
             item.Items.Add(new ButtonMenuItem(Open) { Text = "Open..." });
             item.Items.Add(new ButtonMenuItem(Close) { Text = "Close" });
+            this.Menu.Items.Add(item);
+
+            item = new ButtonMenuItem { Text = "State" };
+            item.Items.Add(new ButtonMenuItem(SaveState) { Text = "Save" });
+            item.Items.Add(new ButtonMenuItem(LoadState) { Text = "Load" });
             this.Menu.Items.Add(item);
 
             item = new ButtonMenuItem { Text = "Movie" };
@@ -77,6 +80,18 @@ namespace NesSharp {
         public void StopMovie(object o, EventArgs e) {
             Monitor.Enter(m_lock);
                 emulator.StopMovie();
+            Monitor.Exit(m_lock);
+        }
+
+        public void SaveState(object o, EventArgs e) {
+            Monitor.Enter(m_lock);
+                emulator.SaveState();
+            Monitor.Exit(m_lock);
+        }
+
+        public void LoadState(object o, EventArgs e) {
+            Monitor.Enter(m_lock);
+                emulator.LoadState();
             Monitor.Exit(m_lock);
         }
 
@@ -144,9 +159,9 @@ namespace NesSharp {
                 }
 
                 // Comment the following 3 lines out to remove frame limiter
-                while (time < 1000.0 / fps * frame) {
-                    time = c.ElapsedTime.AsMilliseconds();
-                }
+                /* while (time < 1000.0 / fps * frame) { */
+                /*     time = c.ElapsedTime.AsMilliseconds(); */
+                /* } */
             }
         }
 
@@ -157,10 +172,11 @@ namespace NesSharp {
         private Texture im;
         private RenderWindow rw;
         private Sprite s;
-        public Bus bus;
+        private Bus bus;
         private ControllerPort controllerPort;
         private IMovie movie;
         private string file;
+        private RAM ram;
 
         public void Render() {
             Update();
@@ -189,11 +205,13 @@ namespace NesSharp {
         }
 
         public void OpenMovie(string path) {
-            movie = new FM2(File.ReadAllLines(path));
+            if (path.EndsWith(".fm2"))
+                movie = new FM2(File.ReadAllLines(path));
+            else
+                movie = new BK2(File.ReadAllLines(path));
             controllerPort.register(new PlayerController(0, movie), 0);
             controllerPort.register(new PlayerController(1, movie), 1);
             File.Delete(file + ".save");
-            movie.Advance();
             SetupCartridge(file);
         }
 
@@ -201,6 +219,28 @@ namespace NesSharp {
             movie = null;
             controllerPort.register(new Controller(1), 0);
             controllerPort.register(new Controller(2), 1);
+        }
+
+        public void SaveState() {
+            using (var stream = File.Open(file + ".state", FileMode.Create))
+            {
+                using (var writer = new BinaryWriter(stream, Encoding.UTF8, false))
+                {
+                    bus.SaveState(writer);
+                    for (ushort i = 0; i < 0x800; i++) writer.Write(ram.Read(i).Item1);
+                }
+            }
+        }
+
+        public void LoadState() {
+            using (var stream = File.Open(file + ".state", FileMode.Open))
+            {
+                using (var reader = new BinaryReader(stream, Encoding.UTF8, false))
+                {
+                    bus.LoadState(reader);
+                    for (ushort i = 0; i < 0x800; i++) ram.Write(i, reader.ReadByte());
+                }
+            }
         }
 
         public void RunFrame() {
@@ -220,7 +260,7 @@ namespace NesSharp {
             bus.RunPreVblank();
 
             if (movie != null) {
-                movie.Advance();
+                movie.Advance(bus.ppu.preventVbl);
                 if (movie.Ended()) StopMovie();
             }
 
@@ -279,7 +319,7 @@ namespace NesSharp {
             bus.Register(ppu);
 
             // Create RAM
-            RAM ram = new RAM(0x10000);
+            ram = new RAM(0x800);
             bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0, 0x1fff)});
 
             // Create Mapper

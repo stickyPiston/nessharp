@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.IO;
 
 namespace NesSharp.Mappers
 {
@@ -8,7 +7,7 @@ namespace NesSharp.Mappers
     {
         byte[,] ROMBanks;
         int bankAmount;
-        int currentBank = 0;
+        internal byte currentBank = 0;
         //No RAM because we don't emulate family BASIC
 
         public UxRomPRG(byte[] RomData)
@@ -41,7 +40,7 @@ namespace NesSharp.Mappers
 
         public void Write(ushort addr, byte data)
         {
-            currentBank = data & 0b0000_1111;
+            currentBank = (byte) (data & 0b0000_1111);
         }
     }
 
@@ -66,7 +65,7 @@ namespace NesSharp.Mappers
     }
     class UxRamCHR : IAddressable
     {
-        byte[] RAM = new byte[0x2000];
+        internal byte[] RAM = new byte[0x2000];
         
         public (byte, byte) Read(ushort addr)
         {
@@ -89,6 +88,22 @@ namespace NesSharp.Mappers
             else
                 CHR = new UxRomCHR(CHRData);
             Nametables = new Nametables(mirror);
+        }
+
+        public override void SaveState(BinaryWriter writer){
+            base.SaveState(writer);
+            writer.Write(((UxRomPRG) PRG).currentBank);
+            if (CHR is UxRamCHR ram) {
+                foreach (byte b in ram.RAM) writer.Write(b);
+            }
+        }
+
+        public override void LoadState(BinaryReader reader) {
+            base.LoadState(reader);
+            ((UxRomPRG) PRG).currentBank = reader.ReadByte();
+            if (CHR is UxRamCHR ram) {
+                for (int i = 0; i < ram.RAM.Length; i++) ram.RAM[i] = reader.ReadByte();
+            }
         }
     }
 }

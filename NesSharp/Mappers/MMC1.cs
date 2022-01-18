@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace NesSharp.Mappers
 {
@@ -6,13 +7,13 @@ namespace NesSharp.Mappers
     {
         private byte[] ROM;
 
-        private byte shift = 0b10000;
-        private byte PRGbank;
-        private byte PRGmode = 3;
+        internal byte shift = 0b10000;
+        internal byte PRGbank;
+        internal byte PRGmode = 3;
+        internal bool ignore;
 
         private Nametables nametables;
         private MMC1CHR CHR;
-        private bool ignore;
 
         public MMC1PRG(byte[] RomData, MMC1CHR CHR, Nametables nametables)
         {
@@ -107,10 +108,10 @@ namespace NesSharp.Mappers
 
     public class MMC1CHR : IAddressable
     {
-        private byte[] ROM;
-        public byte[] CHRbank = new byte[2];
-        public bool CHRmode;
-        private bool RAM;
+        internal byte[] ROM;
+        internal byte[] CHRbank = new byte[2];
+        internal bool CHRmode;
+        internal bool RAM;
 
         public MMC1CHR(byte[] RomData)
         {
@@ -156,6 +157,44 @@ namespace NesSharp.Mappers
             CHR = new MMC1CHR(CHRData);
             PRG = new MMC1PRG(PRGData, (MMC1CHR) CHR, Nametables);
             PRGRAM = new SaveRAM(filename);
+        }
+
+        public override void SaveState(BinaryWriter writer){
+            base.SaveState(writer);
+
+            writer.Write(((MMC1PRG) PRG).shift);
+            writer.Write(((MMC1PRG) PRG).PRGbank);
+            writer.Write(((MMC1PRG) PRG).PRGmode);
+            writer.Write(((MMC1PRG) PRG).ignore);
+
+            writer.Write(((MMC1CHR) CHR).CHRbank[0]);
+            writer.Write(((MMC1CHR) CHR).CHRbank[1]);
+            writer.Write(((MMC1CHR) CHR).CHRmode);
+
+            if (((MMC1CHR) CHR).RAM) {
+                foreach (byte b in ((MMC1CHR) CHR).ROM) writer.Write(b);
+            }
+
+            foreach (byte b in ((SaveRAM) PRGRAM).RAM) writer.Write(b);
+        }
+
+        public override void LoadState(BinaryReader reader) {
+            base.LoadState(reader);
+
+            ((MMC1PRG) PRG).shift = reader.ReadByte();
+            ((MMC1PRG) PRG).PRGbank = reader.ReadByte();
+            ((MMC1PRG) PRG).PRGmode = reader.ReadByte();
+            ((MMC1PRG) PRG).ignore = reader.ReadBoolean();
+
+            ((MMC1CHR) CHR).CHRbank[0] = reader.ReadByte();
+            ((MMC1CHR) CHR).CHRbank[1] = reader.ReadByte();
+            ((MMC1CHR) CHR).CHRmode = reader.ReadBoolean();
+
+            if (((MMC1CHR) CHR).RAM) {
+                for (int i = 0; i < 8 * 1024; i++) ((MMC1CHR) CHR).ROM[i] = reader.ReadByte();
+            }
+
+            for (int i = 0; i < 8 * 1024; i++) ((SaveRAM) PRGRAM).RAM[i] = reader.ReadByte();
         }
     }
 }
