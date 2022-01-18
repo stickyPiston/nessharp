@@ -159,9 +159,9 @@ namespace NesSharp {
                 }
 
                 // Comment the following 3 lines out to remove frame limiter
-                /* while (time < 1000.0 / fps * frame) { */
-                /*     time = c.ElapsedTime.AsMilliseconds(); */
-                /* } */
+                while (time < 1000.0 / fps * frame) {
+                    time = c.ElapsedTime.AsMilliseconds();
+                }
             }
         }
 
@@ -319,7 +319,7 @@ namespace NesSharp {
             bus.Register(ppu);
 
             // Create RAM
-            ram = new RAM(0x800);
+            ram = new RAM(0x800, true);
             bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0, 0x1fff)});
 
             // Create Mapper

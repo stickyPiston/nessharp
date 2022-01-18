@@ -223,7 +223,7 @@ namespace NesSharp.PPU
                         (((PaletteShift1 << x) & 0x80) >> 7) | (((PaletteShift2 << x) & 0x80) >> 6);
 
                     Color color = backgroundColorIndex == 0
-                        ? Palette.BasicColors[bus.Palettes.background]
+                        ? Palette.BasicColors[bus.Palettes.background & 0x3F]
                         : bus.Palettes.Backgrounds[backgroundPaletteIndex][backgroundColorIndex - 1];
 
                     for (int i = 0; i < 8; i++)
@@ -249,7 +249,7 @@ namespace NesSharp.PPU
                                  backgroundColorIndex != 0))
                             {
                                 color = backgroundColorIndex == 0
-                                    ? Palette.BasicColors[bus.Palettes.background]
+                                    ? Palette.BasicColors[bus.Palettes.background & 0x3F]
                                     : bus.Palettes.Backgrounds[backgroundPaletteIndex][backgroundColorIndex - 1];
                                 // color = Color.Blue;
                             }
@@ -282,7 +282,7 @@ namespace NesSharp.PPU
                     // currentFrame.SetPixel(pixel-1, scanline, new Color((byte)pixel, (byte)scanline, 1));
                     currentFrame.SetPixel(pixel, scanline,
                         colorIndex == 0
-                            ? Palette.BasicColors[bus.Palettes.background]
+                            ? Palette.BasicColors[bus.Palettes.background & 0x3F]
                             : bus.Palettes.Backgrounds[paletteIndex][colorIndex - 1]);
                 }
                 else if (renderSprite)
@@ -308,7 +308,7 @@ namespace NesSharp.PPU
 
                             if (spriteColorIndex == 0)
                             {
-                                color = Palette.BasicColors[bus.Palettes.background];
+                                color = Palette.BasicColors[bus.Palettes.background & 0x3F];
                             }
                             else
                             {
@@ -322,7 +322,7 @@ namespace NesSharp.PPU
                 }
                 else
                 {
-                    currentFrame.SetPixel(pixel, scanline, Palette.BasicColors[bus.Palettes.background]);
+                    currentFrame.SetPixel(pixel, scanline, Palette.BasicColors[bus.Palettes.background & 0x3F]);
                 }
 
                 if (mask.ShowSprites)

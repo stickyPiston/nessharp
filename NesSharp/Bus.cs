@@ -113,7 +113,7 @@ namespace NesSharp {
             {
                 this.Tick();
             }
-            while (ppu.scanline != 241 || ppu.pixel != 12);
+            while (ppu.scanline != 241 || ppu.pixel != 2);
         }
 
         public string DumpCycle() {
