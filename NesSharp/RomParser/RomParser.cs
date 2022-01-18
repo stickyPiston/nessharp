@@ -78,6 +78,9 @@ namespace NesSharp
                  case 4:
                      cartridge.mapper = new MMC3(rombytes, vrombytes, cartridge.mirroring);
                      break;
+                 case 11:
+                     cartridge.mapper = new ColorDreams(rombytes, vrombytes, cartridge.mirroring);
+                     break;
                 default:
                     throw new Exception($"Mapper {cartridge.mapperType} not yet implemented.");
             }
