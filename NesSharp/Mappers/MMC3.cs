@@ -8,7 +8,7 @@ namespace NesSharp.Mappers
         private byte[] ROM;
         private bool[] D;
         private byte[] R;
-        private int bank;
+        internal byte bank;
         
         private MMC3 mapper;
 
@@ -53,7 +53,7 @@ namespace NesSharp.Mappers
             switch ((addr & 0x6000) >> 13) {
                 case 0:
                     if ((addr & 1) == 0) {
-                        bank = data & 0b111;
+                        bank = (byte) (data & 0b111);
                         D[0] = ((data >> 6) & 1) == 1;
                         D[1] = (data >> 7) == 1;
                     } else {
@@ -219,6 +219,7 @@ namespace NesSharp.Mappers
             writer.Write(IRQ);
             writer.Write(prevA12Set);
 
+            writer.Write(((MMC3PRG) PRG).bank);
             writer.Write(D[0]);
             writer.Write(D[1]);
             writer.Write(R[0]);
@@ -247,6 +248,7 @@ namespace NesSharp.Mappers
             IRQ = reader.ReadBoolean();
             prevA12Set = reader.ReadBoolean();
 
+            ((MMC3PRG) PRG).bank = reader.ReadByte();
             D[0] = reader.ReadBoolean();
             D[1] = reader.ReadBoolean();
             R[0] = reader.ReadByte();

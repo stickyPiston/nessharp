@@ -64,7 +64,7 @@ namespace NesSharp {
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        private byte clock = 2;
+        private byte clock = 3;
         private byte open = 0;
 
         private ushort OAMDMACycles = 0;

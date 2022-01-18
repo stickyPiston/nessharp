@@ -43,6 +43,7 @@ namespace NesSharp.PPU
         private bool isRenderingSpriteZero;
         private bool secondaryOamHasSpriteZero;
         private bool rendering;
+        private bool prevRendering;
 
         public void SaveState(BinaryWriter writer) {
             writer.Write(control.ToByte());
@@ -74,6 +75,7 @@ namespace NesSharp.PPU
             writer.Write(isRenderingSpriteZero);
             writer.Write(secondaryOamHasSpriteZero);
             writer.Write(rendering);
+            writer.Write(prevRendering);
             writer.Write(tempBackgroundByte);
             writer.Write(nametableByte);
             writer.Write(attrtableByte);
@@ -135,6 +137,7 @@ namespace NesSharp.PPU
             isRenderingSpriteZero = reader.ReadBoolean();
             secondaryOamHasSpriteZero = reader.ReadBoolean();
             rendering = reader.ReadBoolean();
+            prevRendering = reader.ReadBoolean();
             tempBackgroundByte = reader.ReadByte();
             nametableByte = reader.ReadByte();
             attrtableByte = reader.ReadByte();
@@ -177,7 +180,7 @@ namespace NesSharp.PPU
                 // VblankStarted = true,
                 // SpriteOverflow = true
             };
-            ODDFRAME = true;
+            ODDFRAME = false;
             scanline = 261;
             pixel = 340;
 
@@ -218,7 +221,6 @@ namespace NesSharp.PPU
                                                (((PatternTableShift2 << x) & 0x8000) >> 14);
                     int backgroundPaletteIndex =
                         (((PaletteShift1 << x) & 0x80) >> 7) | (((PaletteShift2 << x) & 0x80) >> 6);
-
 
                     Color color = backgroundColorIndex == 0
                         ? Palette.BasicColors[bus.Palettes.background]
@@ -347,7 +349,7 @@ namespace NesSharp.PPU
 
             DrawPixel((uint) (pixel - 1));
 
-            if (mask.ShowBackground || mask.ShowSprites) {
+            if (rendering) {
                 DoSpriteFetches();
 
                 if (scanline <= 239)
@@ -440,6 +442,7 @@ namespace NesSharp.PPU
                 }
             }
 
+            prevRendering = rendering;
             rendering = mask.ShowSprites || mask.ShowBackground;
         }
 
@@ -628,10 +631,12 @@ namespace NesSharp.PPU
                     // paletteLatch2 = (byte) (((attrtableByte >> (((v & 0x4000) >> 12) | ((x & 0b100)))) >> 2) & 1);
                     PatternTableShift1 |= (ushort) ((patterntableWord >> 8) & 0x00ff);
                     PatternTableShift2 |= (ushort) (patterntableWord & 0x00ff);
-                    if (pixel == 256)
-                        YIncrement();
-                    else
+
+                    if (prevRendering) {
                         XIncrement();
+                        if (pixel == 256)
+                            YIncrement();
+                    }
                     break;
             }
         }
@@ -774,7 +779,8 @@ namespace NesSharp.PPU
                     return (val, 0xFF);
                 }
                 default:
-                    throw new NotImplementedException($"Could not read {addr:x4}");
+                    return (0, 0xFF);
+                    // throw new NotImplementedException($"Could not read {addr:x4}");
             }
         }
 

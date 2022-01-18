@@ -159,9 +159,9 @@ namespace NesSharp {
                 }
 
                 // Comment the following 3 lines out to remove frame limiter
-                while (time < 1000.0 / fps * frame) {
-                    time = c.ElapsedTime.AsMilliseconds();
-                }
+                /* while (time < 1000.0 / fps * frame) { */
+                /*     time = c.ElapsedTime.AsMilliseconds(); */
+                /* } */
             }
         }
 
@@ -205,11 +205,13 @@ namespace NesSharp {
         }
 
         public void OpenMovie(string path) {
-            movie = new FM2(File.ReadAllLines(path));
+            if (path.EndsWith(".fm2"))
+                movie = new FM2(File.ReadAllLines(path));
+            else
+                movie = new BK2(File.ReadAllLines(path));
             controllerPort.register(new PlayerController(0, movie), 0);
             controllerPort.register(new PlayerController(1, movie), 1);
             File.Delete(file + ".save");
-            movie.Advance();
             SetupCartridge(file);
         }
 
@@ -257,8 +259,8 @@ namespace NesSharp {
 
             bus.RunPreVblank();
 
-            if (movie != null && !bus.ppu.preventVbl) {
-                movie.Advance();
+            if (movie != null) {
+                movie.Advance(bus.ppu.preventVbl);
                 if (movie.Ended()) StopMovie();
             }
 
