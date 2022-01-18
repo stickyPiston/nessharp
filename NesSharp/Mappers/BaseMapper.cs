@@ -15,11 +15,21 @@ namespace NesSharp.Mappers
         {
             
         }
+
+        public virtual void SaveState(BinaryWriter writer) {
+            writer.Write((byte) Nametables.mirror);
+            foreach (byte b in Nametables.RAM) writer.Write(b);
+        }
+
+        public virtual void LoadState(BinaryReader reader) {
+            Nametables.mirror = (MirrorType) reader.ReadByte();
+            for (int i = 0; i < Nametables.RAM.Length; i++) Nametables.RAM[i] = reader.ReadByte();
+        }
     }
 
     public class SaveRAM : IAddressable {
         
-        private byte[] RAM = new byte[0x2000];
+        internal byte[] RAM = new byte[0x2000];
         private string saveFile;
 
         public SaveRAM() {}
@@ -47,7 +57,7 @@ namespace NesSharp.Mappers
 
     public class Nametables : IAddressable {
 
-        private byte[] RAM = new byte[0x800];
+        internal byte[] RAM = new byte[0x800];
         public MirrorType mirror;
 
         public Nametables(MirrorType mirror) {
