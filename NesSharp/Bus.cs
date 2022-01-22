@@ -109,8 +109,8 @@ namespace NesSharp {
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
 
-        private int sampleSize = 44100;
-        private short[] samples = new short[44100];
+        private int sampleSize = 16000;
+        private short[] samples = new short[16000];
         private ushort sampleCounter = 0;
         private Sound sound = new Sound();
 
@@ -162,7 +162,7 @@ namespace NesSharp {
             }
 
             clock += 1;
-            clock %= 6;
+            clock %= 121;
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>
