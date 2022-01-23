@@ -18,6 +18,7 @@ namespace NesSharp
         public uint sequence = 0x00000000;
         public uint new_sequence = 0x00000000;
         public ushort counter = 0x0000;
+        public ushort tri_counter = 0x0000;
         public ushort reload = 0x0000;
         public byte output = 0x00;
         public int tri_Index = 0;
@@ -45,16 +46,16 @@ namespace NesSharp
         {
             if (active)
             {
-                counter--;
-                if (counter == 0x00)
+                tri_counter--;
+                if (tri_counter == 0x00)
                 {
-                    counter = reload;
+                    tri_counter = reload;
                     tri_Index = (tri_Index + 1) & 0x1F;
                     if (reload >= 2 && counter <= 0x7ff)
                     {
                         sequence = triangle_table[tri_Index];
                     }
-                    output = (byte)(sequence & 0x00000001);
+                    output = (byte)(sequence);
                 }
             }
             return output;

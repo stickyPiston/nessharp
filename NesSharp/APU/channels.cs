@@ -158,7 +158,7 @@ namespace NesSharp
                     
                     triangle.t_seq.reload = (ushort)((value & 0x07) << 8 | (triangle.t_seq.reload & 0x00FF));
                     //timer period
-                    triangle.t_seq.counter = triangle.t_seq.reload;
+                    triangle.t_seq.tri_counter = triangle.t_seq.reload;
                     //timer value
                     triangle.t_seq.sequence = triangle.t_seq.new_sequence;
                     //lc value
@@ -482,7 +482,6 @@ namespace NesSharp
             pulse2.p_osc.frequency = 1789773.0 / (16.0 * (pulse2.p_seq.reload + 1));
             pulse2.p_osc.amplitude = (double)(pulse2.p_env.output - 1) / 16.0;
             pulse2.p_sample = pulse2.p_osc.Sample(globalTime);
-            pulse2.p_sample = pulse2.p_osc.Sample(globalTime);
             if (pulse2.p_lc.counter > 0 && pulse2.p_seq.counter >= 8 && !pulse2.p_swp.mute && pulse2.p_env.output > 2)
                 pulse2.p_output += (pulse2.p_sample - pulse2.p_output) /** 0.5*/;
             else
@@ -520,7 +519,7 @@ namespace NesSharp
                 //triangle.t_output += (triangle.t_sample - triangle.t_output);
                 //triangle.t_output = triangle_table[triangle.t_seq.output];
 
-                triangle.frequency = 1789773.0 / (32.0 * (triangle.t_seq.reload + 1));
+                triangle.frequency = 1789773.0 / (32 * (triangle.t_seq.reload + 1));
                 triangle.t_seq.reload = (ushort)(1789773.0 / (32 * triangle.frequency) - 1);
                 if (triangle.t_linc.start)
                 {
@@ -597,7 +596,7 @@ namespace NesSharp
             //Console.WriteLine($"Pulse 1 sample: {(pulse1.p_sample / 2) + (pulse2.p_sample /2) * Int16.MaxValue}");
             //Console.WriteLine($"Noise sample: {(2.0 *(noise.n_output - 0.5) * 0.1) * 150000}");
             //Console.WriteLine($"Pulse 1 output: {(((1.0 * pulse1.p_output) - 0.8) * 0.5) * 100000}");
-            //Console.WriteLine($"Triangle output: {(2.0 *(triangle.t_output * 10000))}");
+            //Console.WriteLine($"Triangle output: {(((0.4 *triangle.t_output) - 0.5)* 0.1) * 10000}");
 
             //return (double)(((1.0 * pulse1.p_output) - 0.8) * 0.05 + ((1.0 * pulse2.p_output) - 0.8) *0.05);
 
@@ -607,9 +606,10 @@ namespace NesSharp
             //return (double)((((pulse1.p_output) - 0.8) * 0.05 + ((pulse2.p_output) - 0.8) * 0.05) + ((noise.n_output - 0.5)* 0.05)  );
 
             //return (double)((((pulse1.p_output) - 0.8) * 0.05 + ((pulse2.p_output) - 0.8) * 0.05) + ((noise.n_output - 0.5)* 0.05) + ((triangle.t_output - 0.3) * 0.0125));
-            return (double)((((pulse1.p_output) - 0.8) * 0.1 + ((pulse2.p_output) - 0.8) * 0.1) + (2.0 * (noise.n_output - 0.5) * 0.1) + ((0.4 * triangle.t_output - 0.5) * 0.1));
+
+            return (double)((((pulse1.p_output) - 0.8) * 0.1 + ((pulse2.p_output) - 0.8) * 0.1) + (2.0 * (noise.n_output - 0.5) * 0.1) + ((0.2 * triangle.t_output - 0.5) * 0.1));
             //return (double)(((triangle.t_output - 0.2) * 0.05) + ((pulse1.p_output - 0.8) * 0.05));
-            //return (double)(((( triangle.t_output) - 0.5)*0.05 ));
+            //return (double)(((( 0.4 * triangle.t_output) - 0.5)*0.1 ));
             //return (double)((noise.n_output - 0.5)*0.05);
         }
     }
