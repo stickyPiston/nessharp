@@ -200,7 +200,6 @@ namespace NesSharp
 
                     //inhibit
                     inhibit4017 = (value & 0x40) > 0;
-                    Console.WriteLine("inhibit" + inhibit4017);
                     break;
 
                 //noise channel
@@ -510,14 +509,6 @@ namespace NesSharp
                 //https://wiki.nesdev.org/w/index.php?title=APU_Triangle
                 //f = fCPU/(32*(tval + 1))
                 //tval = fCPU/(32*f) - 1
-                //waarschijnlijk geen oscillator gebruiken.
-
-
-                //triangle.t_osc.frequency = 1789773.0 / (32.0 * (triangle.t_seq.reload + 1));
-                //triangle.t_osc.amplitude = (double)((triangle.t_env.output - 1) / 32.0);
-                //triangle.t_sample = triangle.t_osc.Sample(globalTime);
-                //triangle.t_output += (triangle.t_sample - triangle.t_output);
-                //triangle.t_output = triangle_table[triangle.t_seq.output];
 
                 triangle.frequency = 1789773.0 / (32 * (triangle.t_seq.reload + 1));
                 triangle.t_seq.reload = (ushort)(1789773.0 / (32 * triangle.frequency) - 1);
