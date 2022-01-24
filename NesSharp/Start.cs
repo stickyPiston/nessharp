@@ -205,11 +205,13 @@ namespace NesSharp {
         }
 
         public void OpenMovie(string path) {
-            movie = new FM2(File.ReadAllLines(path));
+            if (path.EndsWith(".fm2"))
+                movie = new FM2(File.ReadAllLines(path));
+            else
+                movie = new BK2(File.ReadAllLines(path));
             controllerPort.register(new PlayerController(0, movie), 0);
             controllerPort.register(new PlayerController(1, movie), 1);
             File.Delete(file + ".save");
-            movie.Advance();
             SetupCartridge(file);
         }
 
@@ -257,8 +259,8 @@ namespace NesSharp {
 
             bus.RunPreVblank();
 
-            if (movie != null && !bus.ppu.preventVbl) {
-                movie.Advance();
+            if (movie != null) {
+                movie.Advance(bus.ppu.preventVbl);
                 if (movie.Ended()) StopMovie();
             }
 
@@ -317,7 +319,7 @@ namespace NesSharp {
             bus.Register(ppu);
 
             // Create RAM
-            ram = new RAM(0x800);
+            ram = new RAM(0x800, true);
             bus.Register(new Repeater(ram, 0, 0x800), new []{new Range(0, 0x1fff)});
 
             // Create Mapper

@@ -83,7 +83,7 @@ namespace NesSharp.PPU
         {
             get {
             // Console.WriteLine(index);
-            return BasicColors[ColorIndices[index]];
+            return BasicColors[ColorIndices[index] & 0x3F];
         }
         }
 

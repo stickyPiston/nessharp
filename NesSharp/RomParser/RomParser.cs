@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using NesSharp.Mappers;
+using NesSharp.Mappers.NesSharp.Mappers;
 
 namespace NesSharp
 {
@@ -20,6 +21,7 @@ namespace NesSharp
                 // Other Formats
                 throw new Exception("Wrong file format");
             }
+
             return null;
         }
 
@@ -50,8 +52,8 @@ namespace NesSharp
             int romsize = 16 * 1024 * cartridge.rombanks, vromsize = 8 * 1024 * cartridge.vrombanks;
 
             byte[] trainerbytes = new byte[512];
-            byte[] rombytes     = new byte[romsize];
-            byte[] vrombytes    = new byte[vromsize];
+            byte[] rombytes = new byte[romsize];
+            byte[] vrombytes = new byte[vromsize];
 
             if (cartridge.trainer)
             {
@@ -65,23 +67,34 @@ namespace NesSharp
                 Array.Copy(bytes, 16 + romsize, vrombytes, 0, vromsize);
             }
 
-            switch (cartridge.mapperType) {
+            switch (cartridge.mapperType)
+            {
                 case 0:
                     cartridge.mapper = new NRom(rombytes, vrombytes, cartridge.mirroring);
                     break;
                 case 1:
-                    cartridge.mapper = new MMC1(rombytes, vrombytes, cartridge.mirroring, cartridge.batteryRam ? filename + ".save" : null);
+                    cartridge.mapper = new MMC1(rombytes, vrombytes, cartridge.mirroring,
+                        cartridge.batteryRam ? filename + ".save" : null);
                     break;
-                 case 2:
-                     cartridge.mapper = new UxRom(rombytes, vrombytes, cartridge.mirroring);
+                case 2:
+                    cartridge.mapper = new UxRom(rombytes, vrombytes, cartridge.mirroring);
+                    break;
+                case 3:
+                    cartridge.mapper = new CNROM(rombytes, vrombytes, cartridge.mirroring);
+                    break;
+                case 4:
+                    cartridge.mapper = new MMC3(rombytes, vrombytes, cartridge.mirroring);
+                    break;
+                case 7:
+                     cartridge.mapper = new AxRom(rombytes);
                      break;
-                 case 4:
-                     cartridge.mapper = new MMC3(rombytes, vrombytes, cartridge.mirroring);
-                     break;
+                case 11:
+                    cartridge.mapper = new ColorDreams(rombytes, vrombytes, cartridge.mirroring);
+                    break;
                 default:
                     throw new Exception($"Mapper {cartridge.mapperType} not yet implemented.");
             }
-            
+
 
             // TODO: Bind ROM and VROM to Mapper
             return cartridge;
