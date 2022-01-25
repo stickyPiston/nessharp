@@ -148,8 +148,8 @@ namespace NesSharp {
             if (clock == 0)
             {
                 if (sampleCounter == sampleSize)
-                {// 512, 768, 1024, 2048, 2304, 2321, 2560
-                    var buffer = new SoundBuffer(samples, 1, 44100);//44100
+                {
+                    var buffer = new SoundBuffer(samples, 1, 44100);
                     sound.SoundBuffer = buffer;
                     sound.Play();
                     sampleCounter = 0;
@@ -162,7 +162,7 @@ namespace NesSharp {
             }
 
             clock += 1;
-            clock %= 121;
+            clock %= 120;
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>

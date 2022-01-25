@@ -9,7 +9,6 @@ namespace NesSharp
         public bool irqset;
         
         Bus bus;
-        //public double globalTime = 0.0;
         //https://wiki.nesdev.com/w/index.php/APU_Length_Counter
         private readonly short[] lc_table = {10, 254, 20,  2, 40,  4, 80,  6, 160,
                                     8, 60, 10, 14, 12, 26, 14, 12,  16,
@@ -21,28 +20,16 @@ namespace NesSharp
                                                 160, 202, 254, 380, 508, 
                                                 762, 1016, 2034, 4068
                                                 };
-        public readonly short[] triangle_table ={
-                                                 15, 14, 13, 12, 11, 10,  9,  8,
-                                                 7,  6,  5,  4,  3,  2,  1,  0,
-                                                 0,  1,  2,  3,  4,  5,  6,  7,
-                                                 8,  9, 10, 11, 12, 13, 14, 15
-                                                  };
-        private readonly short[] dmc_table = {428, 380, 340, 320, 286, 
-                                              254, 226, 214, 190, 160, 
-                                              142, 128, 106,  84,  72,  54
-                                                            };
 
         //https://www.nesdev.org/2A03%20technical%20reference.txt
         public Pulse pulse1 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, 0x0000, 0x0000, false, 1, false);
         public Pulse pulse2 = new Pulse(false, false, 0.0, 0.0, 0x0000, 0x0000, 0x0000, 0x0000, false, 1, false);
-        public Triangle triangle = new Triangle(false, false, false, 0.0, 0.0, 0.0, 0x0000, 0x0000, 0x0000, 0x0000, false, 1, 0x0000, false);
+        public Triangle triangle = new Triangle(false, false, false, 0.0, 0.0, 0.0, 0x0000, 0x0000, 0x0000, false, 1, 0x0000, false);
         public Noise noise = new Noise(1, false, false, false, 0.0, 0.0, 0xDBDB, 0x0000, 0x0000, false, 1);
 
-        //public double globalTime = 0.0;
         public X2A03(Bus bus)
         {
             this.bus = bus;
-            //noise.n_seq.sequence = 0xDBDB;
         }
         //public (byte, byte) Read(UInt16 addr) {
         public (byte, byte) Read(UInt16 addr) {
@@ -62,13 +49,11 @@ namespace NesSharp
 
         public void Write(ushort addr, byte value)
         {
-            /* Console.WriteLine($"APU write! {addr} => {value}"); */
             switch (addr)
             {
                 //pulse 1 channel
+                //https://wiki.nesdev.org/w/index.php?title=APU_Pulse
                 case 0x4000:
-                    /* Console.WriteLine($"Duty cycle becomes {(value & 0xC0) >> 6}"); */
-                    //https://wiki.nesdev.org/w/index.php?title=APU_Pulse
                     switch ((value & 0xC0) >> 6)
                     {
                         case 0x00: pulse1.p_seq.sequence = 0b01000000; pulse1.p_osc.dutycycle = 0.125; break;
@@ -78,18 +63,17 @@ namespace NesSharp
 
                     }
                     pulse1.p_seq.sequence = pulse1.p_seq.new_sequence;
-                    pulse1.p_halt = Convert.ToBoolean(value & 0x20);//Convert.ToBoolean
+                    pulse1.p_halt = Convert.ToBoolean(value & 0x20);
                     pulse1.p_env.volume = Convert.ToUInt16(value & 0x0F);
-                    pulse1.p_env.disable = Convert.ToBoolean(value & 0x10); //Convert.ToBoolean
+                    pulse1.p_env.disable = Convert.ToBoolean(value & 0x10);
                     break;
 
                 case 0x4001:
-                    pulse1.p_swp.enabled = Convert.ToBoolean(value & 0x80);//Convert.ToBoolean
-                    pulse1.p_swp.down = Convert.ToBoolean(value & 0x08);//Convert.ToBoolean
+                    pulse1.p_swp.enabled = Convert.ToBoolean(value & 0x80);
+                    pulse1.p_swp.down = Convert.ToBoolean(value & 0x08);
                     pulse1.p_swp.divider = (byte)((value & 0x70) >> 4);
                     pulse1.p_swp.shift = (byte)(value & 0x07);
                     pulse1.p_swp.reload = true;
-                    //pulse1.p_swp.channel = true;
                     break;
 
                 case 0x4002:
@@ -114,18 +98,17 @@ namespace NesSharp
                         case 0x03: pulse2.p_seq.new_sequence = 0b10011111; pulse2.p_osc.dutycycle = 0.750; break;
                     }
                     pulse2.p_seq.sequence = pulse2.p_seq.new_sequence;
-                    pulse2.p_halt = Convert.ToBoolean(value & 0x20); //Convert.ToBoolean
+                    pulse2.p_halt = Convert.ToBoolean(value & 0x20);
                     pulse2.p_env.volume = Convert.ToUInt16(value & 0x0F);
-                    pulse2.p_env.disable = Convert.ToBoolean(value & 0x10); //Convert.ToBoolean
+                    pulse2.p_env.disable = Convert.ToBoolean(value & 0x10);
                     break;
 
                 case 0x4005:
-                    pulse2.p_swp.enabled = Convert.ToBoolean(value & 0x80); //Convert.ToBoolean
-                    pulse2.p_swp.down = Convert.ToBoolean(value & 0x08); //Convert.ToBoolean
+                    pulse2.p_swp.enabled = Convert.ToBoolean(value & 0x80);
+                    pulse2.p_swp.down = Convert.ToBoolean(value & 0x08); 
                     pulse2.p_swp.divider = (byte)((value & 0x70) >> 4);
                     pulse2.p_swp.shift = (byte)(value & 0x07);
                     pulse2.p_swp.reload = true;
-                    //pulse2.p_swp.channel = false;
                     break;
 
                 case 0x4006:
@@ -142,10 +125,9 @@ namespace NesSharp
 
                 //triangle channel
                 case 0x4008:
-                    //stop deze zo in de frame counter en link met linc clock
                     triangle.t_halt = Convert.ToBoolean(value & 0x80);
 
-                    //control flag?
+                    //control flag
                     triangle.t_linc.start = Convert.ToBoolean(value & 0x80);
                     triangle.t_linc.reload = ((ushort)(value & 0x7F));
                     break;
@@ -185,8 +167,8 @@ namespace NesSharp
 
                 //status
                 case 0x4015:
-                    pulse1.p_status = Convert.ToBoolean(value & 0x01); //Convert.ToBoolean
-                    pulse2.p_status = Convert.ToBoolean(value & 0x02); //Convert.ToBoolean
+                    pulse1.p_status = Convert.ToBoolean(value & 0x01);
+                    pulse2.p_status = Convert.ToBoolean(value & 0x02);
                     triangle.t_status = Convert.ToBoolean(value & 0x04);
                     noise.n_status = Convert.ToBoolean(value & 0x08);
 
@@ -223,6 +205,7 @@ namespace NesSharp
             }
         }
 
+        //these objects are used to store core values needed for the apu
         //the pulse object, used in both pulse channels
         public class Pulse
         {
@@ -254,6 +237,7 @@ namespace NesSharp
             }
         }
 
+        //triangle
         public class Triangle
         {
             public bool t_status;
@@ -262,12 +246,9 @@ namespace NesSharp
             public double t_output;
             public double frequency;
             public Sequencer t_seq;
-            public Oscillator t_osc;
-            //public Envelope t_env;
-            //public Sweeper t_swp;
             public Lengthcounter t_lc;
             public Linearcounter t_linc;
-            public Triangle(bool x, bool y, bool z, double a, double b, double c, uint d, uint e, ushort g, ushort h, bool i, byte j, ushort k, bool l)
+            public Triangle(bool x, bool y, bool z, double a, double b, double c, uint d, ushort g, ushort h, bool i, byte j, ushort k, bool l)
             {
                 t_status = x;
                 t_halt = y;
@@ -276,15 +257,13 @@ namespace NesSharp
                 frequency = c;
 
                 t_seq = new Sequencer(d, g);
-                t_osc = new Oscillator(e);
-                //t_env = new Envelope(i, h);
-                //t_swp = new Sweeper(i, j);
                 t_lc = new Lengthcounter(j);
                 t_linc = new Linearcounter(z, l, k);
 
             }
         }
-        // TODO
+
+        //noise
         public class Noise
         {
             public int n_sr;//shift register
@@ -330,10 +309,6 @@ namespace NesSharp
             /* Console.WriteLine(clock_counter); */
 
             //frame_counter
-            //89493
-            //59,660
-            //if (clock_counter == 59660)
-            //    irqset = true;
             if (fc_counter % 6 == 0)
             {
                 fc_counter2++;
@@ -343,26 +318,22 @@ namespace NesSharp
                     // 4-Step Sequence Mode
                     if (fc_counter2 == 3728)
                     {
-                        //clock_counter2 += 0.5;
                         EnvClock();
                     }
 
                     if (fc_counter2 == 7457)
                     {
-                        //clock_counter2 += 0.5;
                         EnvClock();
                         LcClock();
                     }
 
                     if (fc_counter2 == 11186)
                     {
-                        //clock_counter2 += 0.5;
                         EnvClock();
                     }
 
                     if (fc_counter2 == 14915)
                     {
-                        //Console.WriteLine("clock counter" + clock_counter2);
                         if (inhibit4017 == false)
                         {
 
@@ -370,7 +341,6 @@ namespace NesSharp
                             //TODO Fix IRQ
                             //bus.HighIRQ(this);
                         }
-                        //clock_counter2 += 0.5;
                         EnvClock();
                         LcClock();
                         fc_counter2 = 0;
@@ -379,27 +349,6 @@ namespace NesSharp
                         irqset = true;
                     if (fc_counter2 == 1)
                         irqset = false;
-
-
-
-                    //if (quarterFrame == true)
-                    //{
-                    //    pulse1.p_env.ApuClock(pulse1.p_halt);
-                    //    pulse2.p_env.ApuClock(pulse2.p_halt);
-                    //    noise.n_env.ApuClock(noise.n_halt);
-                    //    triangle.t_linc.ApuClock(triangle.t_halt);
-                    //}
-
-                    //if (halfFrame == true)
-                    //{
-                    //    pulse1.p_lc.Clock(pulse1.p_status, pulse1.p_halt);
-                    //    pulse2.p_lc.Clock(pulse2.p_status, pulse2.p_halt);
-                    //    triangle.t_lc.Clock(triangle.t_status, triangle.t_halt);
-                    //    pulse1.p_swp.SweepClock(pulse1.p_seq.reload, 0);
-                    //    pulse2.p_swp.SweepClock(pulse2.p_seq.reload, 1);
-                    //    noise.n_lc.Clock(noise.n_status, noise.n_halt);
-
-                    //}
                 }
                 else
                 {
@@ -430,32 +379,7 @@ namespace NesSharp
                         fc_counter2 = 0;
 
                     }
-
-                    //if (quarterFrame == true)
-                    //{
-                    //    pulse1.p_env.ApuClock(pulse1.p_halt);
-                    //    pulse2.p_env.ApuClock(pulse2.p_halt);
-                    //    noise.n_env.ApuClock(noise.n_halt);
-                    //    triangle.t_linc.ApuClock( triangle.t_halt);
-                    //}
-
-                    //if (halfFrame == true)
-                    //{
-                    //    pulse1.p_lc.Clock(pulse1.p_status, pulse1.p_halt);
-                    //    pulse2.p_lc.Clock(pulse2.p_status, pulse2.p_halt);
-                    //    triangle.t_lc.Clock(triangle.t_status, triangle.t_halt);
-                    //    pulse1.p_swp.SweepClock(pulse1.p_seq.reload, 0);
-                    //    pulse2.p_swp.SweepClock(pulse2.p_seq.reload, 1);
-                    //    noise.n_lc.Clock(noise.n_status, noise.n_halt);
-
-                    //}
                 }
-
-                //pulse1.p_seq.Clock(
-                //    pulse1.p_status,
-                //    (s) => ((s & 0x0001) << 7) | ((s & 0x00FE) >> 1)
-                //);
-                //pulse1.p_sample = pulse1.p_seq.output;
 
             //https://wiki.nesdev.org/w/index.php/APU#Pulse_.28.244000-4007.29
             //The frequency of the pulse channels is a division of the CPU Clock (1.789773MHz NTSC, 1.662607MHz PAL). The output frequency (f) of the generator can be determined by the 11-bit period value (t) written to $4002-4003/$4006-4007. If t < 8, the corresponding pulse channel is silenced.
@@ -467,16 +391,6 @@ namespace NesSharp
                 pulse1.p_output += (pulse1.p_sample - pulse1.p_output) /** 0.5*/;
             else
                 pulse1.p_output = 0;
-            //pulse1.p_output += (pulse1.p_sample - pulse1.p_output) /* 0.5*/;
-
-
-            //pulse1.p_osc.frequency = 1789773.0 / (16.0 * (pulse1.p_seq.reload + 1));
-            //pulse1.p_osc.amplitude = (double)(pulse1.p_env.output - 1) / 16.0;
-            //pulse1.p_sample = pulse1.p_osc.Sample(globalTime);
-            //if (pulse1.p_lc.counter > 0 && pulse1.p_seq.counter >= 8 && !pulse1.p_swp.mute && pulse1.p_env.output > 2)
-            //    pulse1.p_output += (pulse1.p_sample - pulse1.p_output) /** 0.5*/;
-            //else
-            //    pulse1.p_output = 0;
 
             pulse2.p_osc.frequency = 1789773.0 / (16.0 * (pulse2.p_seq.reload + 1));
             pulse2.p_osc.amplitude = (double)(pulse2.p_env.output - 1) / 16.0;
@@ -485,77 +399,39 @@ namespace NesSharp
                 pulse2.p_output += (pulse2.p_sample - pulse2.p_output) /** 0.5*/;
             else
                 pulse2.p_output = 0;
-            //pulse2.p_output += (pulse2.p_sample - pulse2.p_output) /** 0.5*/;
-
-                //pulse2.p_osc.frequency = 1789773.0 / (16.0 * (pulse2.p_seq.reload + 1));
-                //pulse2.p_osc.amplitude = (double)(pulse2.p_env.output - 1) / 16.0;
-                //pulse2.p_sample = pulse2.p_osc.Sample(globalTime);
-                //if (pulse2.p_lc.counter > 0 && pulse2.p_seq.counter >= 8 && !pulse2.p_swp.mute && pulse2.p_env.output > 2)
-                //    pulse2.p_output += (pulse2.p_sample - pulse2.p_output) /** 0.5*/;
-                //else
-                //    pulse2.p_output = 0;
-
-                //if (pulse1.p_lc.counter > 0 && pulse1.p_seq.counter >= 8 && !pulse1.p_swp.mute && pulse1.p_env.output > 2)
-                //    pulse1.p_output += (pulse1.p_sample - pulse1.p_output) * 0.5;
-                //else
-                //    pulse1.p_output = 0;
-                //pulse1.p_seq.Clock(
-                //    pulse1.p_status,
-                //    (s) => ((s & 0x0001) << 7) | ((s & 0x00FE) >> 1)
-                //);
-                //pulse1.p_sample = pulse1.p_seq.output;
 
 
-                //https://wiki.nesdev.org/w/index.php?title=APU_Triangle
-                //f = fCPU/(32*(tval + 1))
-                //tval = fCPU/(32*f) - 1
+            //https://wiki.nesdev.org/w/index.php?title=APU_Triangle
+            //f = fCPU/(32*(tval + 1))
+            //tval = fCPU/(32*f) - 1
 
-                triangle.frequency = 1789773.0 / (32 * (triangle.t_seq.reload + 1));
-                triangle.t_seq.reload = (ushort)(1789773.0 / (32 * triangle.frequency) - 1);
-                if (triangle.t_linc.start)
-                {
-                    triangle.t_seq.triClock(triangle.t_status);
-                }
-                if (triangle.t_lc.counter == 0)
-                    triangle.t_output = 0;
-                else if (triangle.t_status)
-                    triangle.t_output = triangle.t_seq.output;
+            triangle.frequency = 1789773.0 / (32 * (triangle.t_seq.reload + 1));
+            triangle.t_seq.reload = (ushort)(1789773.0 / (32 * triangle.frequency) - 1);
+            if (triangle.t_linc.start)
+            {
+                triangle.t_seq.triClock(triangle.t_status);
+            }
+            if (triangle.t_lc.counter == 0)
+                triangle.t_output = 0;
+            else if (triangle.t_status)
+                triangle.t_output = triangle.t_seq.output;
 
-                //triangle.t_output = triangle_table[globalTime];
-                //triangle.t_output = triangle.t_seq.output * ((triangle.t_env.output - 1) / 32.0);
 
-                //int feedback_bit;
-                //if (noise.n_mode == true) feedback_bit = (noise.n_sr >> 6) & 1;
-                //else feedback_bit = (noise.n_sr >> 1) & 1;
-                //int feedback = feedback_bit ^ (noise.n_sr & 1);
-                //noise.n_sr >>= 1;
-                //noise.n_sr &= ~(1 << 14);
-                //noise.n_sr |= (feedback << 14);
-                //noise.n_status = (noise.n_sr & 1) != 0;
-
-                noise.n_seq.Clock(noise.n_status, 
-                        s => (((s & 0x0001) ^ ((s & 0x0002) >> 1)) << 14) | ((s & 0x7FFF) >> 1)
-                );
+            noise.n_seq.Clock(noise.n_status, 
+                    s => (((s & 0x0001) ^ ((s & 0x0002) >> 1)) << 14) | ((s & 0x7FFF) >> 1)
+            );
                 //if (noise.n_lc.counter > 0 && noise.n_seq.counter >= 8)
                 //{
-                if (noise.n_lc.counter == 0)
-                    noise.n_output = 0;
-                else if (noise.n_status)
-                    noise.n_output = noise.n_seq.output * ((noise.n_env.output - 1) / 16.0);
-                //else
-                //    noise.n_output = 0;
-                //}
-                //else
-                //    noise.n_output = 0;
+            if (noise.n_lc.counter == 0)
+                noise.n_output = 0;
+            else if (noise.n_status)
+                noise.n_output = noise.n_seq.output * ((noise.n_env.output - 1) / 16.0);
 
-
-                //if (!pulse1.p_status) pulse1.p_output = 0;
-                //if (!pulse2.p_status) pulse2.p_output = 0;
-                //if (!noise.n_status) noise.n_output = 0;
             }
-            if (!pulse1.p_status) pulse1.p_output = 0;
-            if (!pulse2.p_status) pulse2.p_output = 0;
-            if (!noise.n_status) noise.n_output = 0;
+        if (!pulse1.p_status) pulse1.p_output = 0;
+        if (!pulse2.p_status) pulse2.p_output = 0;
+        if (!triangle.t_status) triangle.t_output = 0;
+        if (!noise.n_status) noise.n_output = 0;
 
 
         pulse1.p_swp.TrackClock(pulse1.p_seq.reload);
@@ -563,6 +439,7 @@ namespace NesSharp
 
         fc_counter++;
 }
+        //clock envelope
         public void EnvClock()
         {
             pulse1.p_env.Clock(pulse1.p_halt);
@@ -571,6 +448,7 @@ namespace NesSharp
             triangle.t_linc.Clock(triangle.t_halt);
         }
 
+        //clock length counter and sweeper
         public void LcClock()
         {
             pulse1.p_lc.Clock(pulse1.p_status, pulse1.p_halt);
@@ -598,10 +476,11 @@ namespace NesSharp
 
             //return (double)((((pulse1.p_output) - 0.8) * 0.05 + ((pulse2.p_output) - 0.8) * 0.05) + ((noise.n_output - 0.5)* 0.05) + ((triangle.t_output - 0.3) * 0.0125));
 
-            return (double)((((pulse1.p_output) - 0.8) * 0.1 + ((pulse2.p_output) - 0.8) * 0.1) + (2.0 * (noise.n_output - 0.5) * 0.1) + ((0.2 * triangle.t_output - 0.5) * 0.1));
+            return (double)((((pulse1.p_output) - 0.8) * 0.1 + ((pulse2.p_output) - 0.8) * 0.1) + (2.0 * (noise.n_output - 0.5) * 0.1) + ((0.1 * triangle.t_output - 0.5) * 0.1));
             //return (double)(((triangle.t_output - 0.2) * 0.05) + ((pulse1.p_output - 0.8) * 0.05));
-            //return (double)(((( 0.4 * triangle.t_output) - 0.5)*0.1 ));
-            //return (double)((noise.n_output - 0.5)*0.05);
+            //return (double)((triangle.t_output - 0.5) * 0.1);
+            //return (double)((2.0 * (noise.n_output - 0.5) * 0.1));
+            //return (double)((pulse1.p_output - 0.8) * 0.05 + (pulse2.p_output - 0.8) * 0.05);
         }
     }
 }

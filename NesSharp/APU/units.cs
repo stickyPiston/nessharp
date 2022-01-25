@@ -51,7 +51,7 @@ namespace NesSharp
                 {
                     tri_counter = reload;
                     tri_Index = (tri_Index + 1) & 0x1F;
-                    if (reload >= 2 && counter <= 0x7ff)
+                    if (reload >= 2 && counter <= 0x7FF)
                     {
                         sequence = triangle_table[tri_Index];
                     }
@@ -122,7 +122,6 @@ namespace NesSharp
         public byte divider = 0x00;
         private ushort change = 0;
         public bool mute = false;
-        //public bool channel; //1 = p1, 0 = p2
 
         public Sweeper(bool x, byte y)
         {
@@ -131,7 +130,6 @@ namespace NesSharp
             reload = x;
             divider = y;
             shift = y;
-            //channel = z;
 
         }
 
