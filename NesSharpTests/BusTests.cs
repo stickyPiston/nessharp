@@ -34,7 +34,7 @@ namespace NesSharpTests {
         public (byte, byte) Read(ushort _) { return (0, 0); }
     }
 
-    public class Tests {
+    public class BusTests {
         Bus bus;
         ChipA a;
         ChipB b;
