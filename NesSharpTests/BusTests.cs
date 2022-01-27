@@ -34,7 +34,7 @@ namespace NesSharpTests {
         public (byte, byte) Read(ushort _) { return (0, 0); }
     }
 
-    public class Tests {
+    public class BusTests {
         Bus bus;
         ChipA a;
         ChipB b;
@@ -81,8 +81,11 @@ namespace NesSharpTests {
             ppubus.Nametables = new RandomRam();
             ppubus.Patterntables = new RandomRam();
 
+            X2A03 apu = new X2A03(bus);
+            
             bus.Register(cpu);
             bus.Register(ppu);
+            bus.Register(apu);
 
             for (int i = 0; i < 15 * 3; i++) bus.Tick();
 

@@ -312,6 +312,9 @@ namespace NesSharp {
             bus.Register(cpu);
             bus.Register(controllerPort, new Range[] {new Range(0x4016, 0x4017)});
            
+            // Create apu
+            X2A03 apu = new X2A03(bus);
+            bus.Register(apu);
             Cartridge cart = RomParser.Parse(file);
             
             // Create PPU

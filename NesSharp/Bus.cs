@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Collections.Generic;
 using System;
+using SFML.Audio;
 using System.IO;
 using System.Text;
 
@@ -60,8 +61,8 @@ namespace NesSharp {
     public class Bus {
         private CPU cpu;
         internal PPU.PPU ppu;
+        private X2A03 apu;
         internal BaseMapper mapper;
-        private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
         private byte clock = 3;
@@ -129,9 +130,14 @@ namespace NesSharp {
         }
 
         public void BeginOAM(ushort DMACopyAddr) {
-            OAMDMACycles = (ushort) (clock < 3 ? 514 : 513);
+            OAMDMACycles = (ushort) (clock % 6 < 3 ? 514 : 513);
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
+
+        private int sampleSize = 16000;
+        private short[] samples = new short[16000];
+        private ushort sampleCounter = 0;
+        private Sound sound = new Sound();
 
         public void Tick() {
             if (clock % 3 == 0)
@@ -161,11 +167,29 @@ namespace NesSharp {
                 cpu.CycleEnd();
             }
 
-            // apu.Cycle(); // apu works on ppu clock speed because of the sweepers' inherently higher clock speed
+
+            apu.Cycle();
             
+#if !SERVER
+            if (clock == 0)
+            {
+                if (sampleCounter == sampleSize)
+                {
+                    var buffer = new SoundBuffer(samples, 1, 44100);
+                    sound.SoundBuffer = buffer;
+                    sound.Play();
+                    sampleCounter = 0;
+                    Array.Clear(samples, 0, sampleSize);
+                }
+                else
+                {
+                    samples[sampleCounter++] = (short)(apu.noiseOutput() * 10000);
+                }
+            }
+#endif
 
             clock += 1;
-            clock %= 6;
+            clock %= 120;
         }
 
         /// <summary>Sends a non-maskable interrupt to the CPU</summary>
@@ -181,7 +205,6 @@ namespace NesSharp {
         }
 
         public void Register(IAddressable chip, Range[] ranges) {
-            chips.Add(chip);
             foreach(var range in ranges)
             {
                 this.ranges.Add(range, chip);
@@ -212,6 +235,13 @@ namespace NesSharp {
             if (mapper.PRGRAM != null) {
                 Register(mapper.PRGRAM, new Range[] {new Range(0x6000, 0x7FFF)});
             }
+        }
+
+        public void Register(X2A03 apu)
+        {
+            this.apu = apu;
+            Register(apu, new Range[] { new Range(0x4000, 0x4013), new Range(0x4015, 0x4015), new Range(0x4017, 0x4017), new Range(0x400A, 0x400A), new Range(0x400B, 0x400B), new Range(0x400C, 0x400C), new Range(0x400E, 0x400E), new Range(0x400F, 0x400F) });
+
         }
 
         public byte Read(ushort addr) {
