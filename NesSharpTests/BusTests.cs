@@ -81,8 +81,11 @@ namespace NesSharpTests {
             ppubus.Nametables = new RandomRam();
             ppubus.Patterntables = new RandomRam();
 
+            X2A03 apu = new X2A03(bus);
+            
             bus.Register(cpu);
             bus.Register(ppu);
+            bus.Register(apu);
 
             for (int i = 0; i < 15 * 3; i++) bus.Tick();
 

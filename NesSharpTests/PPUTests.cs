@@ -14,6 +14,7 @@ namespace NesSharpTests
         CPU cpu;
         RAM ram;
         PPU ppu;
+        X2A03 apu;
         private PPUMemoryBus ppubus;
 
         [SetUp]
@@ -24,6 +25,9 @@ namespace NesSharpTests
             cpu = new CPU(bus);
             bus.Register(cpu);
 
+
+            apu = new X2A03(bus);
+            bus.Register(apu);
             // Create PPU
             PPU ppu = new PPU(null, bus);
             bus.Register(ppu);
