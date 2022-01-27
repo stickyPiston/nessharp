@@ -169,7 +169,8 @@ namespace NesSharp {
 
 
             apu.Cycle();
-
+            
+#if !SERVER
             if (clock == 0)
             {
                 if (sampleCounter == sampleSize)
@@ -185,6 +186,7 @@ namespace NesSharp {
                     samples[sampleCounter++] = (short)(apu.noiseOutput() * 10000);
                 }
             }
+#endif
 
             clock += 1;
             clock %= 120;
