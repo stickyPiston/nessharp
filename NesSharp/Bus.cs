@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System;
 using SFML.Audio;
+using System.IO;
+using System.Text;
 
 using NesSharp.Mappers;
 
@@ -58,21 +60,45 @@ namespace NesSharp {
 
     public class Bus {
         private CPU cpu;
-        private PPU.PPU ppu;
+        internal PPU.PPU ppu;
         private X2A03 apu;
         internal BaseMapper mapper;
         private List<IAddressable> chips = new List<IAddressable>();
         private Dictionary<Range, IAddressable> ranges = new Dictionary<Range, IAddressable>();
 
-        private byte clock = 2;
+        private byte clock = 3;
         private byte open = 0;
 
-        private int OAMDMACycles = 0;
+        private ushort OAMDMACycles = 0;
         private byte OAMDATA = 0;
         private ushort DMACopyAddr;
 
         public bool IsIRQHigh() {
             return mapper != null && mapper.IRQ;
+        }
+
+        public void SaveState(BinaryWriter writer) {
+            writer.Write(clock);
+            writer.Write(open);
+            writer.Write(OAMDMACycles);
+            writer.Write(OAMDATA);
+            writer.Write(DMACopyAddr);
+
+            cpu.SaveState(writer);
+            ppu.SaveState(writer);
+            mapper.SaveState(writer);
+        }
+
+        public void LoadState(BinaryReader reader) {
+            clock = reader.ReadByte();
+            open = reader.ReadByte();
+            OAMDMACycles = reader.ReadUInt16();
+            OAMDATA = reader.ReadByte();
+            DMACopyAddr = reader.ReadUInt16();
+
+            cpu.LoadState(reader);
+            ppu.LoadState(reader);
+            mapper.LoadState(reader);
         }
 
         //public Run(string romFilepath) { when the emulator accepts roms
@@ -89,7 +115,7 @@ namespace NesSharp {
             {
                 this.Tick();
             }
-            while (ppu.scanline != 241 || ppu.pixel != 12);
+            while (ppu.scanline != 241 || ppu.pixel != 2);
         }
 
         public string DumpCycle() {
@@ -105,7 +131,7 @@ namespace NesSharp {
         }
 
         public void BeginOAM(ushort DMACopyAddr) {
-            OAMDMACycles = clock < 3 ? 514 : 513;
+            OAMDMACycles = (ushort) (clock % 6 < 3 ? 514 : 513);
             this.DMACopyAddr = (ushort)(DMACopyAddr & 0xff00);
         }
 
@@ -242,7 +268,7 @@ namespace NesSharp {
                 }
            }
 
-           throw new Exception($"Can't write to {addr:x4}");
+           // throw new Exception($"Can't write to {addr:x4}");
         }
     };
 }

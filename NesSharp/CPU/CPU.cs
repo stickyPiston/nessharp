@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
 
 namespace NesSharp
 {
@@ -73,7 +73,7 @@ namespace NesSharp
             ABS, ABSX, ABSY,
         }
 
-        public struct Instruction
+        public class Instruction
         {
             public string Name;
             public AddressingMode Mode;
@@ -98,6 +98,22 @@ namespace NesSharp
                 cycles.CopyTo(Cycles, modeCycles.Length + (readsAddr ? 1 : 0));
                 if (readsAddr && writesAddr)
                     Cycles[modeCycles.Length + cycles.Length + 1] = WriteVal;
+            }
+
+            public ushort GetID() {
+                if (this == RESETInstruction) return 256;
+                if (this == NMIInstruction) return 257;
+                if (this == IRQInstruction) return 258;
+                return (ushort) Array.IndexOf(instructions, this);
+            }
+
+            public static Instruction FromID(ushort id) {
+                switch (id) {
+                    case 256: return RESETInstruction;
+                    case 257: return NMIInstruction;
+                    case 258: return IRQInstruction;
+                    default: return instructions[id];
+                }
             }
         }
 
@@ -134,6 +150,45 @@ namespace NesSharp
             // Source: https://www.pagetable.com/?p=410
 
             Reset();
+        }
+
+        public void SaveState(BinaryWriter writer) {
+            writer.Write(PC);
+            writer.Write(S);
+            writer.Write(A);
+            writer.Write(X);
+            writer.Write(Y);
+            writer.Write(P.Write());
+            writer.Write(instr.GetID());
+            writer.Write(cycle);
+            writer.Write(val);
+            writer.Write(addr);
+            writer.Write(incomingNMI);
+            writer.Write(prevIncomingNMI);
+            writer.Write((byte)(polled == null ? 2 : (byte) polled));
+            writer.Write((byte)(prevpolled == null ? 2 : (byte) prevpolled));
+            writer.Write((byte)(prevprevpolled == null ? 2 : (byte) prevprevpolled));
+        }
+
+        public void LoadState(BinaryReader reader) {
+            PC = reader.ReadUInt16();
+            S = reader.ReadByte();
+            A = reader.ReadByte();
+            X = reader.ReadByte();
+            Y = reader.ReadByte();
+            P.Read(reader.ReadByte());
+            instr = Instruction.FromID(reader.ReadUInt16());
+            cycle = reader.ReadByte();
+            val = reader.ReadByte();
+            addr = reader.ReadUInt16();
+            incomingNMI = reader.ReadBoolean();
+            prevIncomingNMI = reader.ReadBoolean();
+            byte polled = reader.ReadByte();
+            this.polled = polled == 2 ? (HardwareInterrupt?) null : (HardwareInterrupt) polled;
+            byte prevpolled = reader.ReadByte();
+            this.prevpolled = prevpolled == 2 ? (HardwareInterrupt?) null : (HardwareInterrupt) prevpolled;
+            byte prevprevpolled = reader.ReadByte();
+            this.prevprevpolled = prevprevpolled == 2 ? (HardwareInterrupt?) null : (HardwareInterrupt) prevprevpolled;
         }
         
         public void Reset()
