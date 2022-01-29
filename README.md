@@ -1,5 +1,7 @@
 # NesSharp
 
+This is a copy of the original repository, which can be found at [GitLab](https://gitlab.com/nes-devteam/nessharp).
+
 ## Summary
 
 NesSharp is an NES emulator created in C#. It is capable of running a fair deal of roms (to be exact the games that run on mappers 0, 1, 2, 4, 7, 11). You can play back movie files from bizhawk and FCEUX. Moreover, you can save the state of the NES and load it back using the state menu. Lastly, games that have a battery -- like the legend of zelda -- will remember their state on a reload.
